@@ -1,0 +1,321 @@
+openapi: 3.1.0
+info:
+  title: AI QA Interview Coach API
+  version: 0.1.0
+  description: Initial MVP contract for interview practice, feedback, CRI and diary flows.
+servers:
+  - url: http://localhost:3001/api/v1
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+  /auth/login:
+    post:
+      summary: Login personal user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /auth/me:
+    get:
+      summary: Get authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Missing or invalid token
+  /dashboard:
+    get:
+      summary: Get initial dashboard data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+        "401":
+          description: Missing or invalid token
+  /interviews:
+    post:
+      summary: Start interview session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartInterviewRequest"
+      responses:
+        "201":
+          description: Interview session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+  /interviews/{sessionId}/answers:
+    post:
+      summary: Submit interview answer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerRequest"
+      responses:
+        "201":
+          description: Answer registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+  /interviews/{sessionId}/complete:
+    post:
+      summary: Complete interview session
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "201":
+          description: Interview session completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewSession"
+  /learning/hint:
+    post:
+      summary: Request progressive help
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LearningHintRequest"
+      responses:
+        "200":
+          description: Hint returned
+  /cri/current:
+    get:
+      summary: Get current Career Readiness Index
+      responses:
+        "200":
+          description: Current CRI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CriSnapshot"
+  /diary/entries:
+    get:
+      summary: List diary entries
+      responses:
+        "200":
+          description: Diary entries
+    post:
+      summary: Create diary entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiaryEntry"
+      responses:
+        "201":
+          description: Diary entry created
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+    StartInterviewRequest:
+      type: object
+      required: [language, targetRole, seniority, topic, difficulty]
+      properties:
+        language:
+          type: string
+          enum: [pt-BR, en]
+        targetRole:
+          type: string
+        seniority:
+          type: string
+        topic:
+          type: string
+        difficulty:
+          type: string
+          enum: [medium, advanced, specialist]
+        interviewerStyle:
+          type: string
+    InterviewSession:
+      type: object
+      properties:
+        id:
+          type: string
+        language:
+          type: string
+        status:
+          type: string
+        currentQuestion:
+          type: string
+        turns:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterviewTurn"
+    InterviewTurn:
+      type: object
+      properties:
+        orderIndex:
+          type: number
+        question:
+          type: string
+        answer:
+          type: string
+        coachNote:
+          type: string
+    SubmitAnswerRequest:
+      type: object
+      required: [answer]
+      properties:
+        answer:
+          type: string
+    FeedbackReport:
+      type: object
+      properties:
+        id:
+          type: string
+        summary:
+          type: string
+        confidenceLevel:
+          type: string
+          enum: [low, medium, high]
+        dimensions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedbackDimension"
+    FeedbackDimension:
+      type: object
+      properties:
+        name:
+          type: string
+        score:
+          type: number
+        evidence:
+          type: string
+        recommendation:
+          type: string
+    LearningHintRequest:
+      type: object
+      required: [language, helpLevel, userAnswer]
+      properties:
+        language:
+          type: string
+          enum: [pt-BR, en]
+        helpLevel:
+          type: string
+          enum: [brief-hint, guidance, structure, commented-answer]
+        userAnswer:
+          type: string
+        concept:
+          type: string
+    CriSnapshot:
+      type: object
+      properties:
+        score:
+          type: number
+        confidenceLevel:
+          type: string
+        composition:
+          type: object
+        evidenceGaps:
+          type: array
+          items:
+            type: string
+    DiaryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        entryType:
+          type: string
+        title:
+          type: string
+        context:
+          type: string
+        decision:
+          type: string
+        nextSteps:
+          type: string
+    Dashboard:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        cri:
+          type: object
+        interviewReadiness:
+          type: object
+        competencies:
+          type: array
+          items:
+            type: object
+        shortcuts:
+          type: array
+          items:
+            type: object

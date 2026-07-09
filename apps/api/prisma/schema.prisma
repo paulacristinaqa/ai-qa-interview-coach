@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  locale       String   @default("pt-BR")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  interviewSessions InterviewSession[]
+  knowledgeItems     KnowledgeItem[]
+  criSnapshots       CriSnapshot[]
+  diaryEntries       DiaryEntry[]
+  learningEvents     LearningEvent[]
+  questionAttempts   QuestionAttempt[]
+  technicalAttempts  TechnicalAttempt[]
+
+  @@map("users")
+}
+
+model InterviewSession {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  language         String
+  targetRole       String    @map("target_role")
+  seniority        String
+  topic            String
+  interviewerStyle String?   @map("interviewer_style")
+  difficulty       String
+  status           String    @default("started")
+  startedAt        DateTime  @default(now()) @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+
+  user    User            @relation(fields: [userId], references: [id])
+  turns   InterviewTurn[]
+  reports FeedbackReport[]
+  learningEvents LearningEvent[]
+
+  @@map("interview_sessions")
+}
+
+model InterviewTurn {
+  id         String   @id @default(uuid())
+  sessionId  String   @map("session_id")
+  orderIndex Int      @map("order_index")
+  question   String
+  answer     String?
+  coachNote  String?  @map("coach_note")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session InterviewSession @relation(fields: [sessionId], references: [id])
+
+  @@map("interview_turns")
+}
+
+model FeedbackReport {
+  id                    String   @id @default(uuid())
+  sessionId             String   @map("session_id")
+  overallSummary        String   @map("overall_summary")
+  confidenceLevel       String   @map("confidence_level")
+  modelName             String?  @map("model_name")
+  promptTemplateVersion String?  @map("prompt_template_version")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  session    InterviewSession   @relation(fields: [sessionId], references: [id])
+  dimensions FeedbackDimension[]
+
+  @@map("feedback_reports")
+}
+
+model FeedbackDimension {
+  id             String @id @default(uuid())
+  reportId       String @map("report_id")
+  dimension      String
+  score          Float
+  evidence       String
+  recommendation String
+
+  report FeedbackReport @relation(fields: [reportId], references: [id])
+
+  @@map("feedback_dimensions")
+}
+
+model KnowledgeItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  body      String
+  tags      Json?
+  source    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("knowledge_items")
+}
+
+model CriSnapshot {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  score           Float
+  confidenceLevel String   @map("confidence_level")
+  composition     Json
+  evidenceGaps    Json     @map("evidence_gaps")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("cri_snapshots")
+}
+
+model DiaryEntry {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  entryType String   @map("entry_type")
+  title     String
+  context   String?
+  decision  String?
+  nextSteps String?  @map("next_steps")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("diary_entries")
+}
+
+model LearningEvent {
+  id             String            @id @default(uuid())
+  userId         String            @map("user_id")
+  sessionId      String?           @map("session_id")
+  concept        String
+  helpLevel      String            @map("help_level")
+  retryRequested Boolean           @default(false) @map("retry_requested")
+  language       String            @default("pt-BR")
+  content        Json
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  user    User              @relation(fields: [userId], references: [id])
+  session InterviewSession? @relation(fields: [sessionId], references: [id])
+
+  @@map("learning_events")
+}
+
+model Question {
+  id          String            @id @default(uuid())
+  topic       String
+  language    String            @default("pt-BR")
+  level       Int
+  type        String
+  competency  String
+  prompt      String
+  criteria    Json
+  hints       Json
+  modelAnswer String            @map("model_answer")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  attempts QuestionAttempt[]
+
+  @@map("questions")
+}
+
+model QuestionAttempt {
+  id         String   @id @default(uuid())
+  questionId String   @map("question_id")
+  userId     String   @map("user_id")
+  answer     String
+  score      Float
+  helpUsed   Boolean  @default(false) @map("help_used")
+  result     String
+  feedback   Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  question Question @relation(fields: [questionId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@map("question_attempts")
+}
+
+model TechnicalChallenge {
+  id                 String             @id @default(uuid())
+  area               String
+  title              String
+  difficulty         String
+  context            String
+  evaluationCriteria Json               @map("evaluation_criteria")
+  modelSolution      String             @map("model_solution")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  attempts TechnicalAttempt[]
+
+  @@map("technical_challenges")
+}
+
+model TechnicalAttempt {
+  id               String   @id @default(uuid())
+  challengeId      String   @map("challenge_id")
+  userId           String   @map("user_id")
+  answer           String
+  feedback         Json
+  solutionRevealed Boolean  @default(false) @map("solution_revealed")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  challenge TechnicalChallenge @relation(fields: [challengeId], references: [id])
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@map("technical_attempts")
+}
