@@ -19,8 +19,12 @@ export class TechnicalLabService {
       ? challenge.evaluationCriteria.map((criterion: unknown) => String(criterion))
       : [];
     const normalized = answer.toLowerCase();
-    const covered = criteria.filter((criterion: string) => normalized.includes(criterion.split(" ")[0].toLowerCase()));
-    const score = Math.max(20, Math.min(95, Math.round((covered.length / Math.max(criteria.length, 1)) * 80 + 15)));
+    const covered = criteria.filter((criterion: string) => matchesCriterion(normalized, criterion));
+    const evidenceBonus = answer.length >= 320 ? 10 : answer.length >= 180 ? 5 : 0;
+    const score = Math.max(
+      20,
+      Math.min(95, Math.round((covered.length / Math.max(criteria.length, 1)) * 75 + 15 + evidenceBonus))
+    );
     return this.prisma.technicalAttempt.create({
       data: {
         userId,
@@ -30,10 +34,13 @@ export class TechnicalLabService {
           score,
           covered,
           missing: criteria.filter((criterion: string) => !covered.includes(criterion)),
+          criteria,
           recommendation:
             score >= 75
-              ? "Boa cobertura. Refine exemplos de dados e evidencias."
-              : "Inclua criterios de avaliacao, massa de dados e riscos do cenario."
+              ? "Boa cobertura. Refine exemplos de dados, evidencias observaveis e trade-offs."
+              : "Inclua criterio de avaliacao, massa de dados, risco principal, evidencia e impacto para stakeholder.",
+          interviewTip:
+            "Em entrevista, responda com contexto, risco, abordagem, evidencia esperada, trade-off e como comunicaria o resultado."
         }
       },
       include: { challenge: true }
@@ -57,4 +64,12 @@ export class TechnicalLabService {
     });
     return { challengeId, modelSolution: challenge.modelSolution };
   }
+}
+
+function matchesCriterion(answer: string, criterion: string) {
+  return criterion
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((token) => token.length > 3)
+    .some((token) => answer.includes(token));
 }

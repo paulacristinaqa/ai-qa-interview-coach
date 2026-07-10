@@ -93,6 +93,19 @@ interface LearningEvent {
   };
 }
 
+interface CriResponse {
+  score: number;
+  confidenceLevel: string;
+  composition: Record<string, number>;
+  evidenceGaps: string[];
+  explanation?: {
+    summary: string;
+    strongestPillar: string;
+    evidenceLevel: string;
+    nextBestAction: string;
+  };
+}
+
 export default function Home() {
   const [email, setEmail] = useState("paula@example.com");
   const [password, setPassword] = useState("change-me-locally");
@@ -131,9 +144,11 @@ export default function Home() {
   const [labResult, setLabResult] = useState<JsonRecord | null>(null);
   const [knowledgeItems, setKnowledgeItems] = useState<JsonRecord[]>([]);
   const [history, setHistory] = useState<JsonRecord | null>(null);
-  const [cri, setCri] = useState<JsonRecord | null>(null);
+  const [cri, setCri] = useState<CriResponse | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<JsonRecord[]>([]);
+  const [diarySuggestions, setDiarySuggestions] = useState<JsonRecord[]>([]);
   const [exportText, setExportText] = useState("");
+  const [knowledgeFilters, setKnowledgeFilters] = useState({ search: "", type: "", tag: "" });
   const [interviewConfig, setInterviewConfig] = useState({
     language: "en",
     targetRole: "QA Automation Engineer",
@@ -357,7 +372,15 @@ export default function Home() {
   }
 
   async function loadKnowledge() {
-    const [items, historyData] = await Promise.all([api<JsonRecord[]>("/knowledge"), api<JsonRecord>("/knowledge/history")]);
+    const params = new URLSearchParams();
+    if (knowledgeFilters.search) params.set("search", knowledgeFilters.search);
+    if (knowledgeFilters.type) params.set("type", knowledgeFilters.type);
+    if (knowledgeFilters.tag) params.set("tag", knowledgeFilters.tag);
+    const query = params.toString();
+    const [items, historyData] = await Promise.all([
+      api<JsonRecord[]>(query ? `/knowledge?${query}` : "/knowledge"),
+      api<JsonRecord>("/knowledge/history")
+    ]);
     setKnowledgeItems(items);
     setHistory(historyData);
   }
@@ -369,12 +392,14 @@ export default function Home() {
   }
 
   async function refreshCri() {
-    setCri(await api<JsonRecord>("/cri/current"));
+    setCri(await api<CriResponse>("/cri/current"));
     await loadWorkspace();
   }
 
   async function loadDiary() {
-    setDiaryEntries(await api<JsonRecord[]>("/diary/entries"));
+    const [entries, suggestions] = await Promise.all([api<JsonRecord[]>("/diary/entries"), api<JsonRecord[]>("/diary/suggestions")]);
+    setDiaryEntries(entries);
+    setDiarySuggestions(suggestions);
   }
 
   async function createDiary(event: FormEvent<HTMLFormElement>) {
@@ -630,6 +655,11 @@ export default function Home() {
           <section className="two-column">
             <article className="panel">
               <div className="panel-header"><div><h2>Knowledge Base</h2><p>Notas, aprendizados e historico.</p></div><button onClick={loadKnowledge}>Atualizar</button></div>
+              <div className="config-grid">
+                <label>Busca<input value={knowledgeFilters.search} onChange={(event) => setKnowledgeFilters({ ...knowledgeFilters, search: event.target.value })} /></label>
+                <label>Tipo<input value={knowledgeFilters.type} onChange={(event) => setKnowledgeFilters({ ...knowledgeFilters, type: event.target.value })} placeholder="learning, note..." /></label>
+                <label>Tag<input value={knowledgeFilters.tag} onChange={(event) => setKnowledgeFilters({ ...knowledgeFilters, tag: event.target.value })} /></label>
+              </div>
               <form className="answer-form" onSubmit={createKnowledge}>
                 <label>Titulo<input value={knowledgeForm.title} onChange={(event) => setKnowledgeForm({ ...knowledgeForm, title: event.target.value })} /></label>
                 <label>Nota<textarea rows={3} value={knowledgeForm.body} onChange={(event) => setKnowledgeForm({ ...knowledgeForm, body: event.target.value })} /></label>
@@ -640,13 +670,32 @@ export default function Home() {
 
             <article className="panel">
               <div className="panel-header"><div><h2>CRI e Developer Diary</h2><p>Recalculo de prontidao e diario exportavel.</p></div><button onClick={refreshCri}>Recalcular CRI</button></div>
-              {cri ? <pre>{JSON.stringify(cri, null, 2)}</pre> : null}
+              {cri ? (
+                <div className="feedback-panel">
+                  <strong>{cri.score}/100 - {cri.confidenceLevel}</strong>
+                  <p>{cri.explanation?.summary}</p>
+                  <p>{cri.explanation?.evidenceLevel}</p>
+                  <p><strong>Proxima acao:</strong> {cri.explanation?.nextBestAction}</p>
+                  {cri.evidenceGaps.length ? <p><strong>Lacunas:</strong> {cri.evidenceGaps.join(" | ")}</p> : null}
+                </div>
+              ) : null}
               <form className="answer-form" onSubmit={createDiary}>
                 <label>Titulo<input value={diaryForm.title} onChange={(event) => setDiaryForm({ ...diaryForm, title: event.target.value })} /></label>
                 <label>Decisao<textarea rows={3} value={diaryForm.decision} onChange={(event) => setDiaryForm({ ...diaryForm, decision: event.target.value })} /></label>
                 <div className="actions"><button>Salvar diario</button><button type="button" className="ghost-button" onClick={loadDiary}>Listar</button><button type="button" className="ghost-button" onClick={() => exportData("diary")}>Exportar</button></div>
               </form>
               <p>{diaryEntries.length} entradas no diario.</p>
+              {diarySuggestions.length ? (
+                <div className="history-list">
+                  {diarySuggestions.map((suggestion) => (
+                    <div key={`${suggestion.entryType}-${suggestion.title}`}>
+                      <span>{String(suggestion.entryType)}</span>
+                      <strong>{String(suggestion.title)}</strong>
+                      <p>{String(suggestion.nextSteps ?? "")}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </article>
           </section>
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from "@nestjs/common";
 import { AuthService } from "../auth/auth.service";
 import { KnowledgeService } from "./knowledge.service";
 
@@ -10,9 +10,14 @@ export class KnowledgeController {
   ) {}
 
   @Get()
-  list(@Headers("authorization") authorization: string | undefined) {
+  list(
+    @Headers("authorization") authorization: string | undefined,
+    @Query("search") search?: string,
+    @Query("type") type?: string,
+    @Query("tag") tag?: string
+  ) {
     const user = this.authService.getUserFromAuthorization(authorization);
-    return this.knowledgeService.list(user.id);
+    return this.knowledgeService.list(user.id, { search, type, tag });
   }
 
   @Get("history")

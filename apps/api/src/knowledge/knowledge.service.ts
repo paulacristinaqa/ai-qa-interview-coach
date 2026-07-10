@@ -5,8 +5,20 @@ import { PrismaService } from "../database/prisma.service";
 export class KnowledgeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(userId: string) {
-    return this.prisma.knowledgeItem.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } });
+  async list(userId: string, filters: { search?: string; type?: string; tag?: string } = {}) {
+    const items = await this.prisma.knowledgeItem.findMany({
+      where: { userId, type: filters.type },
+      orderBy: { updatedAt: "desc" }
+    });
+    return items.filter((item) => {
+      const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+      const matchesTag = filters.tag ? tags.includes(filters.tag) : true;
+      const search = filters.search?.toLowerCase();
+      const matchesSearch = search
+        ? item.title.toLowerCase().includes(search) || item.body.toLowerCase().includes(search) || tags.some((tag) => tag.toLowerCase().includes(search))
+        : true;
+      return matchesTag && matchesSearch;
+    });
   }
 
   history(userId: string) {
@@ -66,10 +78,14 @@ export class KnowledgeService {
       fileName: "etqa-knowledge-base.md",
       markdown: items
         .map(
-          (item: { title: string; type: string; source: string | null; body: string }) =>
-            `## ${item.title}\n\nTipo: ${item.type}\nFonte: ${item.source ?? "manual"}\n\n${item.body}`
+          (item: { title: string; type: string; source: string | null; body: string; tags?: unknown }) =>
+            `## ${item.title}\n\nTipo: ${item.type}\nFonte: ${item.source ?? "manual"}\nTags: ${formatTags(item.tags)}\n\n${item.body}`
         )
         .join("\n\n---\n\n")
     };
   }
+}
+
+function formatTags(tags: unknown) {
+  return Array.isArray(tags) ? tags.map(String).join(", ") : "";
 }

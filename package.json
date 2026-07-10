@@ -13,6 +13,8 @@
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
+    "test:e2e": "node tests/e2e/smoke.mjs",
+    "setup:local": "powershell -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:migrate": "npm run prisma:migrate -w apps/api"
   },

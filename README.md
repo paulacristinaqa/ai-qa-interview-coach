@@ -201,7 +201,7 @@ Endpoint:
 
 ### Technical Lab
 
-Disponibiliza desafios tecnicos com contexto, criterios de avaliacao, tentativa da usuaria, feedback e solucao modelo liberada por acao explicita.
+Disponibiliza desafios tecnicos com contexto realista de entrevista, criterios de avaliacao, tentativa da usuaria, feedback e solucao modelo liberada por acao explicita. Os desafios cobrem API, SQL, Test Design e Automacao.
 
 Endpoints:
 
@@ -211,7 +211,7 @@ Endpoints:
 
 ### Knowledge Base e Historico
 
-Permite registrar notas e aprendizados, consultar itens salvos, ver historico consolidado de entrevistas/tentativas/desafios e exportar conteudo em Markdown.
+Permite registrar notas e aprendizados, consultar itens salvos, filtrar por busca, tipo ou tag, ver historico consolidado de entrevistas/tentativas/desafios e exportar conteudo em Markdown.
 
 Endpoints:
 
@@ -223,7 +223,7 @@ Endpoints:
 
 ### Career Readiness Index
 
-Recalcula o indice de prontidao de carreira com base em tentativas do banco de perguntas, feedback de entrevistas e Technical Lab. O resultado inclui score, nivel de confianca, composicao e lacunas de evidencia.
+Recalcula o indice de prontidao de carreira com base em tentativas do banco de perguntas, feedback de entrevistas e Technical Lab. O resultado inclui score, nivel de confianca, composicao, lacunas de evidencia e explicacao do motivo do score.
 
 Endpoint:
 
@@ -231,13 +231,14 @@ Endpoint:
 
 ### Developer Diary
 
-Permite registrar decisoes, contexto, proximos passos e exportar o diario em Markdown. Serve como base de portfolio e rastreio de evolucao do projeto.
+Permite registrar decisoes, ADR simples, changelog, future improvements, contexto, proximos passos e exportar o diario em Markdown. Tambem sugere entradas automaticamente com base nas evidencias recentes.
 
 Endpoints:
 
 - `GET /api/v1/diary/entries`
 - `POST /api/v1/diary/entries`
 - `PATCH /api/v1/diary/entries/:entryId`
+- `GET /api/v1/diary/suggestions`
 - `GET /api/v1/diary/export`
 
 ## Fluxo Sugerido Para QA Manual
@@ -270,8 +271,23 @@ Endpoints:
 - `npm.cmd run build`: compila API e Web.
 - `npm.cmd run lint`: roda verificacao TypeScript nos workspaces.
 - `npm.cmd run test`: roda testes dos workspaces.
+- `npm.cmd run test:e2e`: roda smoke E2E contra API local ja iniciada.
+- `npm.cmd run setup:local`: executa setup local com install, Postgres via Docker quando disponivel, Prisma, lint e testes.
 - `npm.cmd run prisma:generate`: gera Prisma Client.
 - `npm.cmd run prisma:migrate`: aplica migracoes no banco local.
+
+## Qualidade e CI
+
+O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate/migrate, lint, testes e build.
+
+Para smoke E2E local:
+
+1. Suba banco, API e Web com `npm.cmd run dev`.
+2. Em outro terminal, rode:
+
+```powershell
+npm.cmd run test:e2e
+```
 
 Em macOS/Linux, os mesmos comandos podem ser usados com `npm` no lugar de `npm.cmd`.
 

@@ -21,6 +21,12 @@ export class DiaryController {
     return this.diaryService.exportMarkdown(user.id);
   }
 
+  @Get("suggestions")
+  suggestions(@Headers("authorization") authorization: string | undefined) {
+    const user = this.authService.getUserFromAuthorization(authorization);
+    return this.diaryService.suggestions(user.id);
+  }
+
   @Post("entries")
   create(
     @Headers("authorization") authorization: string | undefined,

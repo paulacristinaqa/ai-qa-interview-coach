@@ -63,6 +63,66 @@ const seededChallenges = [
     evaluationCriteria: ["massa controlada", "agregacoes", "reconciliacao", "casos nulos"],
     modelSolution:
       "Criaria massa com meses, status e nulos, compararia totais por agregacao, reconciliaria origem-destino e testaria arredondamentos."
+  },
+  {
+    area: "Test Design",
+    title: "Matriz de testes para checkout com cupom",
+    difficulty: "medium",
+    context:
+      "Em uma entrevista, pedem que voce desenhe cenarios para um checkout com carrinho, cupom percentual, frete, pagamento recusado e estoque limitado.",
+    evaluationCriteria: ["cenarios positivos", "cenarios negativos", "bordas", "tabela de decisao", "risco de regressao"],
+    modelSolution:
+      "Eu criaria uma tabela de decisao cruzando cupom valido/invalido/expirado, frete gratis/pago, estoque disponivel/indisponivel e pagamento aprovado/recusado, priorizando riscos de cobranca incorreta e pedido criado sem pagamento."
+  },
+  {
+    area: "Automation",
+    title: "Estrategia para reduzir testes flaky no CI",
+    difficulty: "advanced",
+    context:
+      "O pipeline de uma squad falha de forma intermitente em testes E2E. Explique como voce investigaria, estabilizaria e decidiria o que automatizar em outro nivel.",
+    evaluationCriteria: ["causa raiz", "isolamento", "observabilidade", "piramide de testes", "criterio de remocao"],
+    modelSolution:
+      "Eu separaria falhas por tipo, adicionaria logs/screenshots/traces, buscaria dependencia de tempo ou dados, moveria checks instaveis para API/unit quando possivel e manteria E2E apenas para fluxos criticos com dados controlados."
+  },
+  {
+    area: "API",
+    title: "Investigacao de bug intermitente em endpoint paginado",
+    difficulty: "advanced",
+    context:
+      "Durante a entrevista, o avaliador diz que clientes recebem itens duplicados em uma API paginada quando usam filtros e ordenacao. Monte sua investigacao.",
+    evaluationCriteria: ["reproducao minima", "contrato", "ordenacao estavel", "dados concorrentes", "evidencia"],
+    modelSolution:
+      "Eu criaria massa controlada, fixaria filtros e ordenacao, verificaria cursor/offset, testaria dados inseridos durante a paginacao e coletaria request ids e queries para provar se o problema e contrato, ordenacao ou concorrencia."
+  },
+  {
+    area: "SQL",
+    title: "Auditoria de divergencia entre pedido e pagamento",
+    difficulty: "medium",
+    context:
+      "Um gestor reporta que o dashboard mostra mais pedidos pagos do que a tabela de pagamentos conciliados. Explique queries e checks que voce faria.",
+    evaluationCriteria: ["joins", "duplicidade", "nulos", "status", "reconciliacao"],
+    modelSolution:
+      "Eu compararia chaves de pedido/pagamento, status considerados como pago, duplicidades por pagamento, pedidos sem pagamento e pagamentos sem pedido, fechando totais por periodo com queries de reconciliacao."
+  },
+  {
+    area: "Test Design",
+    title: "Plano exploratorio para feature pouco especificada",
+    difficulty: "basic",
+    context:
+      "O PO entrega uma feature com requisitos incompletos perto do fim da sprint. Descreva como voce testaria sem travar o time.",
+    evaluationCriteria: ["perguntas", "riscos", "charter exploratorio", "priorizacao", "comunicacao"],
+    modelSolution:
+      "Eu faria perguntas de escopo minimo, listaria riscos, criaria charters exploratorios curtos, validaria fluxos criticos primeiro e comunicaria claramente incertezas e decisoes tomadas."
+  },
+  {
+    area: "Automation",
+    title: "Escolha entre automatizar UI ou API",
+    difficulty: "basic",
+    context:
+      "Em uma entrevista, perguntam como voce decide se um cenario deve ser automatizado via UI, API ou teste unitario.",
+    evaluationCriteria: ["valor", "velocidade", "estabilidade", "cobertura", "manutencao"],
+    modelSolution:
+      "Eu avaliaria o risco coberto, velocidade de feedback, estabilidade e custo de manutencao. Preferiria API/unit para regra e contrato, deixando UI para fluxos criticos de integracao real."
   }
 ];
 

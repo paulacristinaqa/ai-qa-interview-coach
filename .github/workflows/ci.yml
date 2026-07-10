@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: etqa
+          POSTGRES_PASSWORD: etqa_password
+          POSTGRES_DB: etqa_interview_coach
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U etqa -d etqa_interview_coach"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://etqa:etqa_password@localhost:5432/etqa_interview_coach?schema=public
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3001/api/v1
+      JWT_SECRET: ci-local-secret
+      SINGLE_USER_NAME: Paula QA Tester
+      SINGLE_USER_EMAIL: paula@example.com
+      SINGLE_USER_PASSWORD: change-me-locally
+      AI_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - run: npm run prisma:migrate
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build

@@ -27,11 +27,14 @@ export class CriService {
     );
     const score = Math.round(questionScore * 0.35 + interviewScore * 0.4 + technicalScore * 0.25);
     const evidenceCount = attempts.length + feedbackDimensions.length + technicalAttempts.length;
+    const composition = { questionScore, interviewScore, technicalScore, evidenceCount };
+    const evidenceGaps = buildEvidenceGaps(attempts.length, feedbackDimensions.length, technicalAttempts.length);
     const payload = {
       score,
       confidenceLevel: evidenceCount >= 12 ? "high" : evidenceCount >= 5 ? "medium" : "low",
-      composition: { questionScore, interviewScore, technicalScore, evidenceCount },
-      evidenceGaps: evidenceCount < 5 ? ["Complete mais entrevistas e desafios para elevar a confianca."] : []
+      composition,
+      evidenceGaps,
+      explanation: buildExplanation(score, composition, evidenceGaps)
     };
 
     await this.prisma.criSnapshot.create({
@@ -39,8 +42,8 @@ export class CriService {
         userId,
         score,
         confidenceLevel: payload.confidenceLevel,
-        composition: payload.composition,
-        evidenceGaps: payload.evidenceGaps
+        composition,
+        evidenceGaps
       }
     });
     return payload;
@@ -49,4 +52,33 @@ export class CriService {
 
 function average(values: number[], fallback: number) {
   return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : fallback;
+}
+
+function buildEvidenceGaps(questionCount: number, feedbackCount: number, technicalCount: number) {
+  const gaps = [];
+  if (questionCount < 5) gaps.push("Responder pelo menos 5 perguntas niveladas para estabilizar o pilar de conhecimento.");
+  if (feedbackCount < 5) gaps.push("Gerar feedback estruturado de entrevistas para medir comunicacao e profundidade.");
+  if (technicalCount < 3) gaps.push("Completar pelo menos 3 desafios do Technical Lab para medir aplicacao pratica.");
+  return gaps;
+}
+
+function buildExplanation(
+  score: number,
+  composition: { questionScore: number; interviewScore: number; technicalScore: number; evidenceCount: number },
+  evidenceGaps: string[]
+) {
+  const strongest = [
+    { name: "perguntas", score: composition.questionScore },
+    { name: "entrevistas", score: composition.interviewScore },
+    { name: "technical lab", score: composition.technicalScore }
+  ].sort((a, b) => b.score - a.score)[0];
+  return {
+    summary: `Seu CRI esta em ${score}/100 porque combina desempenho em perguntas (${composition.questionScore}), entrevistas (${composition.interviewScore}) e desafios praticos (${composition.technicalScore}).`,
+    strongestPillar: strongest.name,
+    evidenceLevel:
+      composition.evidenceCount >= 12
+        ? "Ha evidencias suficientes para uma leitura mais confiavel."
+        : "Ainda ha poucas evidencias, entao o score deve ser lido como direcao inicial.",
+    nextBestAction: evidenceGaps[0] ?? "Manter pratica semanal e buscar consistencia nos pilares mais baixos."
+  };
 }
