@@ -121,7 +121,7 @@ export class DatabaseBootstrap implements OnModuleInit {
 }
 
 function buildSeededQuestions() {
-  return topicCatalog.flatMap((topic) =>
+  const baseQuestions = topicCatalog.flatMap((topic) =>
     languages.flatMap((language) =>
       levels.flatMap((level) =>
         topic.subjects.map((subject, index) => ({
@@ -138,7 +138,48 @@ function buildSeededQuestions() {
       )
     )
   );
+
+  return [...baseQuestions, ...buildSupplementalQuestions()];
 }
+
+function buildSupplementalQuestions() {
+  return topicCatalog.flatMap((topic) => {
+    const combinations = languages.flatMap((language) =>
+      levels.flatMap((level) =>
+        supplementalAngles.map((angle, index) => ({
+          topic: topic.topic,
+          language,
+          level,
+          type: angle.type,
+          competency: topic.competency,
+          prompt: buildSupplementalPrompt(language, topic.topic, angle, level),
+          criteria: buildSupplementalCriteria(language, angle, level),
+          hints: buildSupplementalHints(language, angle, level),
+          modelAnswer: buildSupplementalModelAnswer(language, topic.topic, angle, level, index)
+        }))
+      )
+    );
+
+    return combinations.slice(0, 82);
+  });
+}
+
+const supplementalAngles = [
+  { type: "technical", focus: "risk analysis", pt: "analise de risco", en: "risk analysis" },
+  { type: "scenario", focus: "incident investigation", pt: "investigacao de incidente", en: "incident investigation" },
+  { type: "technical", focus: "test data strategy", pt: "estrategia de massa de dados", en: "test data strategy" },
+  { type: "scenario", focus: "stakeholder communication", pt: "comunicacao com stakeholders", en: "stakeholder communication" },
+  { type: "technical", focus: "regression strategy", pt: "estrategia de regressao", en: "regression strategy" },
+  { type: "scenario", focus: "production readiness", pt: "prontidao para producao", en: "production readiness" },
+  { type: "technical", focus: "observability", pt: "observabilidade", en: "observability" },
+  { type: "scenario", focus: "prioritization under pressure", pt: "priorizacao sob pressao", en: "prioritization under pressure" },
+  { type: "technical", focus: "root cause reasoning", pt: "raciocinio de causa raiz", en: "root cause reasoning" },
+  { type: "scenario", focus: "ambiguous requirements", pt: "requisitos ambiguos", en: "ambiguous requirements" },
+  { type: "technical", focus: "quality metrics", pt: "metricas de qualidade", en: "quality metrics" },
+  { type: "scenario", focus: "cross-team alignment", pt: "alinhamento entre times", en: "cross-team alignment" },
+  { type: "technical", focus: "automation ROI", pt: "retorno de automacao", en: "automation ROI" },
+  { type: "scenario", focus: "interview follow-up", pt: "follow-up de entrevista", en: "interview follow-up" }
+];
 
 function buildPrompt(language: string, topic: string, subject: string, level: number) {
   const levelLabel = language === "en" ? levelNames[level].en : levelNames[level].pt;
@@ -183,4 +224,60 @@ function buildModelAnswer(language: string, topic: string, subject: string, leve
   }
 
   return `Eu comecaria pelo risco e pelo comportamento esperado de ${subject} em ${topic}, criaria casos positivos e negativos representativos, definiria evidencias observaveis e explicaria o principal trade-off. No nivel ${level}, tambem conectaria a decisao ao impacto de negocio e risco de regressao.`;
+}
+
+function buildSupplementalPrompt(
+  language: string,
+  topic: string,
+  angle: { pt: string; en: string; focus: string },
+  level: number
+) {
+  const levelLabel = language === "en" ? levelNames[level].en : levelNames[level].pt;
+  if (language === "en") {
+    return `Grill Me ${levelLabel}: for ${topic}, answer a technical interview question about ${angle.en}. Give your reasoning, evidence, and one follow-up question you would ask.`;
+  }
+
+  return `Grill Me ${levelLabel}: em ${topic}, responda uma pergunta de entrevista tecnica sobre ${angle.pt}. Traga raciocinio, evidencia e uma pergunta de follow-up que voce faria.`;
+}
+
+function buildSupplementalCriteria(language: string, angle: { pt: string; en: string }, level: number) {
+  const base =
+    language === "en"
+      ? ["clear answer", angle.en, "evidence", "practical example", "trade-off"]
+      : ["resposta clara", angle.pt, "evidencia", "exemplo pratico", "trade-off"];
+  const advanced =
+    language === "en"
+      ? ["business impact", "edge case", "decision rationale"]
+      : ["impacto de negocio", "cenario de borda", "justificativa da decisao"];
+  return level >= 2 ? [...base, ...advanced] : base;
+}
+
+function buildSupplementalHints(language: string, angle: { pt: string; en: string }, level: number) {
+  if (language === "en") {
+    return [
+      `Anchor the answer on ${angle.en}.`,
+      "State what evidence would prove your approach.",
+      level === 3 ? "Challenge your own solution with a failure mode." : "Keep the answer structured and concrete."
+    ];
+  }
+
+  return [
+    `Ancore a resposta em ${angle.pt}.`,
+    "Diga qual evidencia provaria sua abordagem.",
+    level === 3 ? "Questione sua propria solucao com um modo de falha." : "Mantenha a resposta estruturada e concreta."
+  ];
+}
+
+function buildSupplementalModelAnswer(
+  language: string,
+  topic: string,
+  angle: { pt: string; en: string },
+  level: number,
+  index: number
+) {
+  if (language === "en") {
+    return `For ${topic}, I would frame ${angle.en} by naming the risk, choosing a small but representative example, defining observable evidence, and explaining the trade-off. At level ${level}, I would also mention stakeholder impact and one follow-up question to reduce ambiguity.`;
+  }
+
+  return `Em ${topic}, eu estruturaria ${angle.pt} nomeando o risco, escolhendo um exemplo pequeno e representativo, definindo evidencia observavel e explicando o trade-off. No nivel ${level}, tambem citaria impacto para stakeholders e uma pergunta de follow-up para reduzir ambiguidade.`;
 }

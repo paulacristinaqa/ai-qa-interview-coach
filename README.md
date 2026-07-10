@@ -182,7 +182,7 @@ Endpoint:
 
 ### Banco de Perguntas Nivelado
 
-Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho. O seed inicial gera pelo menos 100 perguntas com criterios de boa resposta, dicas progressivas e resposta modelo.
+Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho. O seed inicial gera 708 perguntas: 118 por tema, com criterios de boa resposta, dicas progressivas e resposta modelo.
 
 Endpoints:
 
