@@ -11,6 +11,8 @@ import { DiaryController } from "./diary/diary.controller";
 import { DiaryService } from "./diary/diary.service";
 import { FeedbackController } from "./feedback/feedback.controller";
 import { FeedbackService } from "./feedback/feedback.service";
+import { GrillMeController } from "./grill-me/grill-me.controller";
+import { GrillMeService } from "./grill-me/grill-me.service";
 import { HealthController } from "./health/health.controller";
 import { InterviewsController } from "./interviews/interviews.controller";
 import { InterviewsService } from "./interviews/interviews.service";
@@ -30,6 +32,7 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     DashboardController,
     InterviewsController,
     FeedbackController,
+    GrillMeController,
     QuestionsController,
     LearningController,
     TechnicalLabController,
@@ -44,6 +47,7 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     DashboardService,
     InterviewsService,
     FeedbackService,
+    GrillMeService,
     QuestionsService,
     LearningService,
     TechnicalLabService,

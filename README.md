@@ -163,6 +163,15 @@ Endpoints:
 - `POST /api/v1/interviews/:sessionId/answers`
 - `POST /api/v1/interviews/:sessionId/complete`
 
+### Grill Me
+
+Modo de entrevista tecnica por tema, idioma, nivel e pressao. Os idiomas disponiveis agora sao Portugues e Ingles. Os temas iniciais seedados sao API Testing, SQL, Test Design, Automation, Behavioral e Agile/QA Process. Os niveis sao basic, intermediate e advanced. Os modos sao standard, light-pressure e realistic.
+
+Endpoints:
+
+- `POST /api/v1/grill-me/sessions`
+- `POST /api/v1/grill-me/sessions/:sessionId/answers`
+
 ### Feedback Estruturado
 
 Depois de finalizar uma entrevista, gera um feedback por dimensoes, com resumo, nivel de confianca, evidencias e recomendacoes acionaveis.
@@ -173,10 +182,12 @@ Endpoint:
 
 ### Banco de Perguntas Nivelado
 
-Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho.
+Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho. O seed inicial gera pelo menos 100 perguntas com criterios de boa resposta, dicas progressivas e resposta modelo.
 
 Endpoints:
 
+- `GET /api/v1/questions`
+- `GET /api/v1/questions/topics`
 - `GET /api/v1/questions/next`
 - `POST /api/v1/questions/:questionId/attempts`
 
@@ -237,16 +248,19 @@ Endpoints:
 4. Responder duas ou tres perguntas.
 5. Finalizar a entrevista.
 6. Gerar feedback estruturado.
-7. Buscar uma pergunta nivelada.
-8. Pedir dica ou exemplo no Guided Learning.
-9. Responder a pergunta e verificar o resultado.
-10. Abrir um desafio do Technical Lab.
-11. Enviar uma solucao e depois revelar a solucao modelo.
-12. Criar uma nota na Knowledge Base.
-13. Carregar historico.
-14. Recalcular o CRI.
-15. Criar uma entrada no Developer Diary.
-16. Exportar Knowledge Base ou Diary em Markdown.
+7. Iniciar um Grill Me em Ingles com pressao leve.
+8. Responder follow-ups ate a sessao finalizar.
+9. Buscar uma pergunta nivelada.
+10. Conferir criterios, dicas e resposta modelo.
+11. Pedir dica ou exemplo no Guided Learning.
+12. Responder a pergunta e verificar o resultado.
+13. Abrir um desafio do Technical Lab.
+14. Enviar uma solucao e depois revelar a solucao modelo.
+15. Criar uma nota na Knowledge Base.
+16. Carregar historico.
+17. Recalcular o CRI.
+18. Criar uma entrada no Developer Diary.
+19. Exportar Knowledge Base ou Diary em Markdown.
 
 ## Scripts
 

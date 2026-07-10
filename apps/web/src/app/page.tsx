@@ -43,9 +43,13 @@ interface InterviewSession {
 interface Question {
   id: string;
   topic: string;
+  language: "pt-BR" | "en";
   level: number;
+  competency: string;
   prompt: string;
+  criteria: string[];
   hints: string[];
+  modelAnswer: string;
 }
 
 interface TechnicalChallenge {
@@ -57,6 +61,21 @@ interface TechnicalChallenge {
 }
 
 type JsonRecord = Record<string, unknown>;
+type GrillMode = "standard" | "light-pressure" | "realistic";
+type GrillLevel = "basic" | "intermediate" | "advanced";
+
+interface GrillMeResponse {
+  mode: GrillMode;
+  level?: GrillLevel;
+  sourceQuestion?: Question;
+  attempt?: JsonRecord | null;
+  session: InterviewSession;
+}
+
+interface QuestionTopic {
+  topic: string;
+  competency: string;
+}
 
 export default function Home() {
   const [email, setEmail] = useState("paula@example.com");
@@ -73,6 +92,23 @@ export default function Home() {
   const [questionAnswer, setQuestionAnswer] = useState("");
   const [questionResult, setQuestionResult] = useState<JsonRecord | null>(null);
   const [hint, setHint] = useState<JsonRecord | null>(null);
+  const [questionTopics, setQuestionTopics] = useState<QuestionTopic[]>([]);
+  const [questionBankCount, setQuestionBankCount] = useState(0);
+  const [grillSession, setGrillSession] = useState<InterviewSession | null>(null);
+  const [grillSourceQuestion, setGrillSourceQuestion] = useState<Question | null>(null);
+  const [grillAnswer, setGrillAnswer] = useState("");
+  const [grillResult, setGrillResult] = useState<JsonRecord | null>(null);
+  const [grillConfig, setGrillConfig] = useState<{
+    topic: string;
+    language: "pt-BR" | "en";
+    level: GrillLevel;
+    mode: GrillMode;
+  }>({
+    topic: "API Testing",
+    language: "en",
+    level: "intermediate",
+    mode: "light-pressure"
+  });
   const [challenges, setChallenges] = useState<TechnicalChallenge[]>([]);
   const [selectedChallengeId, setSelectedChallengeId] = useState("");
   const [labAnswer, setLabAnswer] = useState("");
@@ -103,6 +139,7 @@ export default function Home() {
   });
 
   const currentTurn = useMemo(() => session?.turns.find((turn) => !turn.answer), [session]);
+  const currentGrillTurn = useMemo(() => grillSession?.turns.find((turn) => !turn.answer), [grillSession]);
   const selectedChallenge = challenges.find((challenge) => challenge.id === selectedChallengeId);
 
   useEffect(() => {
@@ -166,12 +203,16 @@ export default function Home() {
 
   async function loadWorkspace(accessToken = token) {
     const authHeader = { Authorization: `Bearer ${accessToken}` };
-    const [dashboardData, challengeData] = await Promise.all([
+    const [dashboardData, challengeData, topicData, bankData] = await Promise.all([
       fetch(`${apiBaseUrl}/dashboard`, { headers: authHeader }).then((response) => response.json()),
-      fetch(`${apiBaseUrl}/technical-lab/challenges`, { headers: authHeader }).then((response) => response.json())
+      fetch(`${apiBaseUrl}/technical-lab/challenges`, { headers: authHeader }).then((response) => response.json()),
+      fetch(`${apiBaseUrl}/questions/topics`, { headers: authHeader }).then((response) => response.json()),
+      fetch(`${apiBaseUrl}/questions`, { headers: authHeader }).then((response) => response.json())
     ]);
     setDashboard(dashboardData as DashboardData);
     setChallenges(challengeData as TechnicalChallenge[]);
+    setQuestionTopics(topicData as QuestionTopic[]);
+    setQuestionBankCount((bankData as Question[]).length);
     setSelectedChallengeId((challengeData as TechnicalChallenge[])[0]?.id ?? "");
   }
 
@@ -209,8 +250,41 @@ export default function Home() {
     setFeedback(await api<JsonRecord>(`/feedback/sessions/${session.id}`, { method: "POST" }));
   }
 
+  async function startGrillMe() {
+    const response = await api<GrillMeResponse>("/grill-me/sessions", {
+      method: "POST",
+      body: JSON.stringify({
+        ...grillConfig,
+        targetRole: interviewConfig.targetRole
+      })
+    });
+    setGrillSession(response.session);
+    setGrillSourceQuestion(response.sourceQuestion ?? null);
+    setGrillAnswer("");
+    setGrillResult(null);
+  }
+
+  async function submitGrillAnswer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!grillSession || !grillAnswer.trim()) return;
+    const response = await api<GrillMeResponse>(`/grill-me/sessions/${grillSession.id}/answers`, {
+      method: "POST",
+      body: JSON.stringify({ answer: grillAnswer, helpUsed: false })
+    });
+    setGrillSession(response.session);
+    setGrillResult(response.attempt ?? null);
+    setGrillAnswer("");
+    await loadWorkspace();
+  }
+
   async function loadQuestion() {
-    setQuestion(await api<Question>(`/questions/next?topic=${encodeURIComponent(interviewConfig.topic)}`));
+    const level = grillConfig.level === "advanced" ? 3 : grillConfig.level === "intermediate" ? 2 : 1;
+    const params = new URLSearchParams({
+      topic: grillConfig.topic,
+      language: grillConfig.language,
+      level: String(level)
+    });
+    setQuestion(await api<Question>(`/questions/next?${params.toString()}`));
     setQuestionResult(null);
   }
 
@@ -397,6 +471,46 @@ export default function Home() {
 
           <section className="panel">
             <div className="panel-header">
+              <div>
+                <h2>Grill Me</h2>
+                <p>Entrevista tecnica por tema, idioma, nivel e modo de pressao.</p>
+              </div>
+              <button onClick={startGrillMe}>Comecar Grill Me</button>
+            </div>
+            <div className="config-grid">
+              <label>Tema<select value={grillConfig.topic} onChange={(event) => setGrillConfig({ ...grillConfig, topic: event.target.value })}>{["API Testing", "SQL", "Test Design", "Automation", "Behavioral", "Agile/QA Process", ...questionTopics.map((item) => item.topic)].filter((topic, index, list) => list.indexOf(topic) === index).map((topic) => <option key={topic} value={topic}>{topic}</option>)}</select></label>
+              <label>Idioma<select value={grillConfig.language} onChange={(event) => setGrillConfig({ ...grillConfig, language: event.target.value as "pt-BR" | "en" })}><option value="en">Ingles</option><option value="pt-BR">Portugues</option></select></label>
+              <label>Nivel<select value={grillConfig.level} onChange={(event) => setGrillConfig({ ...grillConfig, level: event.target.value as GrillLevel })}><option value="basic">Basico</option><option value="intermediate">Intermediario</option><option value="advanced">Avancado</option></select></label>
+              <label>Modo<select value={grillConfig.mode} onChange={(event) => setGrillConfig({ ...grillConfig, mode: event.target.value as GrillMode })}><option value="standard">Padrao</option><option value="light-pressure">Pressao leve</option><option value="realistic">Entrevista realista</option></select></label>
+            </div>
+            <p className="helper-text">Banco carregado: {questionBankCount} perguntas seedadas/registradas.</p>
+            {grillSourceQuestion ? (
+              <div className="mini-card">
+                <strong>{grillSourceQuestion.topic} - nivel {grillSourceQuestion.level}</strong>
+                <p>{grillSourceQuestion.prompt}</p>
+              </div>
+            ) : null}
+            {grillSession ? (
+              <div className="session">
+                <div className="session-meta"><span>{grillSession.language}</span><span>{grillSession.topic}</span><span>{grillConfig.mode}</span><span>{grillSession.status}</span></div>
+                <ol className="turns">
+                  {grillSession.turns.map((turn) => (
+                    <li key={turn.orderIndex}><strong>{turn.question}</strong>{turn.answer ? <p>{turn.answer}</p> : null}{turn.coachNote ? <em>{turn.coachNote}</em> : null}</li>
+                  ))}
+                </ol>
+                {currentGrillTurn && grillSession.status === "started" ? (
+                  <form className="answer-form" onSubmit={submitGrillAnswer}>
+                    <label>Resposta Grill Me<textarea rows={5} value={grillAnswer} onChange={(event) => setGrillAnswer(event.target.value)} /></label>
+                    <button>Responder follow-up</button>
+                  </form>
+                ) : <p>Grill Me finalizado. Gere feedback estruturado pela sessao se quiser consolidar a avaliacao.</p>}
+                {grillResult ? <pre>{JSON.stringify(grillResult, null, 2)}</pre> : null}
+              </div>
+            ) : null}
+          </section>
+
+          <section className="panel">
+            <div className="panel-header">
               <div><h2>Simulador textual</h2><p>Responda ate tres rodadas e gere feedback estruturado.</p></div>
               <button onClick={() => startInterview()}>Iniciar</button>
             </div>
@@ -428,7 +542,19 @@ export default function Home() {
           <section className="two-column">
             <article className="panel">
               <div className="panel-header"><div><h2>Banco de perguntas</h2><p>Questao nivelada conforme desempenho.</p></div><button onClick={loadQuestion}>Buscar</button></div>
-              {question ? <div className="mini-card"><strong>Nivel {question.level}: {question.topic}</strong><p>{question.prompt}</p></div> : null}
+              {question ? (
+                <div className="mini-card">
+                  <strong>Nivel {question.level}: {question.topic}</strong>
+                  <p>{question.prompt}</p>
+                  <span>Competencia: {question.competency}</span>
+                  <p><strong>Criterios:</strong> {question.criteria.join(", ")}</p>
+                  <p><strong>Dicas:</strong> {question.hints.join(" | ")}</p>
+                  <details>
+                    <summary>Resposta modelo</summary>
+                    <p>{question.modelAnswer}</p>
+                  </details>
+                </div>
+              ) : null}
               <form className="answer-form" onSubmit={submitQuestion}>
                 <label>Resposta<textarea rows={4} value={questionAnswer} onChange={(event) => setQuestionAnswer(event.target.value)} /></label>
                 <div className="actions"><button>Responder</button><button type="button" className="ghost-button" onClick={() => askHint("hint")}>Dica</button><button type="button" className="ghost-button" onClick={() => askHint("example")}>Exemplo</button></div>

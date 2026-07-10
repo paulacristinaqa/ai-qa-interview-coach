@@ -2,52 +2,48 @@ import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { hashPassword } from "./password";
 import { PrismaService } from "./prisma.service";
 
-const seededQuestions = [
+const topicCatalog = [
   {
     topic: "API Testing",
-    language: "pt-BR",
-    level: 1,
-    type: "technical",
     competency: "APIs",
-    prompt: "Como voce validaria um endpoint REST que cria usuarios?",
-    criteria: ["menciona status code", "valida payload", "cobre erros", "pensa em contrato"],
-    hints: ["Comece pelo contrato", "Inclua cenarios felizes e negativos"],
-    modelAnswer: "Eu validaria contrato, status 201, schema, persistencia, duplicidade, campos obrigatorios e mensagens de erro."
-  },
-  {
-    topic: "API Testing",
-    language: "pt-BR",
-    level: 2,
-    type: "scenario",
-    competency: "APIs",
-    prompt: "Uma API retorna 500 intermitente em producao. Como voce investigaria?",
-    criteria: ["usa logs", "correlaciona payload", "isola ambiente", "prioriza impacto"],
-    hints: ["Pense em observabilidade", "Explique como reduziria o escopo"],
-    modelAnswer: "Eu correlacionaria logs, request ids, payloads e dependencias externas, depois reproduziria o menor caso possivel."
+    subjects: ["REST contracts", "status codes", "authentication", "pagination", "idempotency", "error handling"]
   },
   {
     topic: "SQL",
-    language: "pt-BR",
-    level: 1,
-    type: "technical",
     competency: "SQL",
-    prompt: "Explique como testaria uma regra de negocio baseada em joins entre pedidos e pagamentos.",
-    criteria: ["define dados", "testa joins", "valida bordas", "confirma agregacoes"],
-    hints: ["Monte massa controlada", "Inclua pedidos sem pagamento"],
-    modelAnswer: "Eu criaria massa minima com pedidos pagos, pendentes e sem pagamento, validando joins, filtros e totais esperados."
+    subjects: ["joins", "aggregations", "data reconciliation", "CTEs", "null handling", "audit queries"]
+  },
+  {
+    topic: "Test Design",
+    competency: "Pensamento critico",
+    subjects: ["boundary values", "decision tables", "risk-based testing", "regression scope", "negative scenarios", "test data"]
   },
   {
     topic: "Automation",
-    language: "pt-BR",
-    level: 2,
-    type: "technical",
     competency: "Automacao",
-    prompt: "Como voce decidiria o que automatizar primeiro em uma suite regressiva?",
-    criteria: ["risco", "frequencia", "estabilidade", "valor de feedback"],
-    hints: ["Nem tudo precisa ser automatizado primeiro", "Priorize risco e repeticao"],
-    modelAnswer: "Eu priorizaria fluxos criticos, repetitivos, estaveis e com alto custo manual, deixando cenarios instaveis para investigacao."
+    subjects: ["test pyramid", "flaky tests", "selectors", "CI feedback", "API automation", "maintenance strategy"]
+  },
+  {
+    topic: "Behavioral",
+    competency: "Behavioral",
+    subjects: ["conflict", "ownership", "communication", "feedback", "prioritization", "learning from failure"]
+  },
+  {
+    topic: "Agile/QA Process",
+    competency: "Comunicacao",
+    subjects: ["definition of done", "shift-left", "bug triage", "sprint planning", "quality metrics", "release readiness"]
   }
 ];
+
+const languages = ["pt-BR", "en"];
+const levels = [1, 2, 3];
+const levelNames: Record<number, { pt: string; en: string }> = {
+  1: { pt: "basico", en: "basic" },
+  2: { pt: "intermediario", en: "intermediate" },
+  3: { pt: "avancado", en: "advanced" }
+};
+
+const seededQuestions = buildSeededQuestions();
 
 const seededChallenges = [
   {
@@ -103,13 +99,13 @@ export class DatabaseBootstrap implements OnModuleInit {
   private async seedQuestionBank() {
     for (const question of seededQuestions) {
       const existing = await this.prisma.question.findFirst({
-        where: { topic: question.topic, level: question.level, prompt: question.prompt }
+        where: { topic: question.topic, language: question.language, level: question.level, prompt: question.prompt }
       });
       if (!existing) {
         await this.prisma.question.create({ data: question });
       }
     }
-    this.logger.log("Question bank ready");
+    this.logger.log(`Question bank ready with at least ${seededQuestions.length} seeded questions`);
   }
 
   private async seedTechnicalLab() {
@@ -122,4 +118,69 @@ export class DatabaseBootstrap implements OnModuleInit {
       }
     }
   }
+}
+
+function buildSeededQuestions() {
+  return topicCatalog.flatMap((topic) =>
+    languages.flatMap((language) =>
+      levels.flatMap((level) =>
+        topic.subjects.map((subject, index) => ({
+          topic: topic.topic,
+          language,
+          level,
+          type: index % 2 === 0 ? "technical" : "scenario",
+          competency: topic.competency,
+          prompt: buildPrompt(language, topic.topic, subject, level),
+          criteria: buildCriteria(language, subject, level),
+          hints: buildHints(language, subject, level),
+          modelAnswer: buildModelAnswer(language, topic.topic, subject, level)
+        }))
+      )
+    )
+  );
+}
+
+function buildPrompt(language: string, topic: string, subject: string, level: number) {
+  const levelLabel = language === "en" ? levelNames[level].en : levelNames[level].pt;
+  if (language === "en") {
+    return `In a ${levelLabel} QA interview, explain how you would handle ${subject} in ${topic}. Include a concrete example and one trade-off.`;
+  }
+
+  return `Em uma entrevista QA de nivel ${levelLabel}, explique como voce lidaria com ${subject} em ${topic}. Inclua um exemplo concreto e um trade-off.`;
+}
+
+function buildCriteria(language: string, subject: string, level: number) {
+  const base =
+    language === "en"
+      ? ["clear context", "technical reasoning", "concrete example", "risk awareness"]
+      : ["contexto claro", "raciocinio tecnico", "exemplo concreto", "consciencia de risco"];
+  const advanced =
+    language === "en"
+      ? ["trade-off", "edge cases", "stakeholder impact"]
+      : ["trade-off", "cenarios de borda", "impacto para stakeholders"];
+  return level === 1 ? [...base, subject] : [...base, ...advanced, subject];
+}
+
+function buildHints(language: string, subject: string, level: number) {
+  if (language === "en") {
+    return [
+      `Start by defining the risk behind ${subject}.`,
+      "Use context, action, result, and trade-off.",
+      level >= 2 ? "Mention edge cases and how you would get evidence." : "Keep the answer short and concrete."
+    ];
+  }
+
+  return [
+    `Comece explicando o risco por tras de ${subject}.`,
+    "Use contexto, acao, resultado e trade-off.",
+    level >= 2 ? "Cite cenarios de borda e como obter evidencias." : "Mantenha a resposta curta e concreta."
+  ];
+}
+
+function buildModelAnswer(language: string, topic: string, subject: string, level: number) {
+  if (language === "en") {
+    return `I would start from the risk and expected behavior for ${subject} in ${topic}, create representative positive and negative cases, define observable evidence, and explain the main trade-off. At level ${level}, I would also connect the decision to business impact and regression risk.`;
+  }
+
+  return `Eu comecaria pelo risco e pelo comportamento esperado de ${subject} em ${topic}, criaria casos positivos e negativos representativos, definiria evidencias observaveis e explicaria o principal trade-off. No nivel ${level}, tambem conectaria a decisao ao impacto de negocio e risco de regressao.`;
 }
