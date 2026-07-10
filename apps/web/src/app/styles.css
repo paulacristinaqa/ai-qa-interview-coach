@@ -127,6 +127,11 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .ghost-button {
   background: transparent;
   color: var(--accent-strong);
@@ -153,7 +158,8 @@ button {
 
 .competency-grid,
 .config-grid,
-.shortcut-row {
+.shortcut-row,
+.priority-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
@@ -180,6 +186,58 @@ button {
 .strong,
 .advanced {
   border-left: 4px solid var(--strong);
+}
+
+.priority-card,
+.metric-row div,
+.history-list div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f9fafc;
+}
+
+.priority-card {
+  min-height: 140px;
+}
+
+.priority-card.high {
+  border-left: 4px solid var(--priority);
+}
+
+.priority-card.medium {
+  border-left: 4px solid var(--development);
+}
+
+.priority-card span,
+.metric-row span,
+.history-list span,
+.helper-text {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.priority-card strong,
+.metric-row strong {
+  color: var(--accent-strong);
+  font-size: 1.6rem;
+}
+
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.history-list strong {
+  color: var(--text);
 }
 
 .session {

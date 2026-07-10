@@ -27,10 +27,27 @@ describe("AuthService", () => {
     ).toThrow(UnauthorizedException);
   });
 
+  it("uses configured user values from environment", () => {
+    process.env.SINGLE_USER_NAME = "QA Local";
+    process.env.SINGLE_USER_EMAIL = "qa@example.com";
+    process.env.SINGLE_USER_PASSWORD = "secret";
+    process.env.SINGLE_USER_LOCALE = "en";
+
+    const service = new AuthService();
+    const response = service.login({ email: "qa@example.com", password: "secret" });
+
+    expect(response.user.name).toBe("QA Local");
+    expect(response.user.locale).toBe("en");
+
+    delete process.env.SINGLE_USER_NAME;
+    delete process.env.SINGLE_USER_EMAIL;
+    delete process.env.SINGLE_USER_PASSWORD;
+    delete process.env.SINGLE_USER_LOCALE;
+  });
+
   it("rejects missing bearer token", () => {
     const service = new AuthService();
 
     expect(() => service.getUserFromAuthorization()).toThrow(UnauthorizedException);
   });
 });
-

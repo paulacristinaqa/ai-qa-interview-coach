@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:3001/api/v1";
 
@@ -15,6 +15,16 @@ interface DashboardData {
   cri: { score: number; confidenceLevel: string; trend: string; limitation: string };
   interviewReadiness: { status: string; nextBestAction: string };
   competencies: Array<{ name: string; score: number; status: string }>;
+  priorityCards: Array<{ id: string; title: string; score: number; severity: string; action: string }>;
+  weeklyProgress: {
+    completedSessions: number;
+    activeSessions: number;
+    questionAttempts: number;
+    technicalAttempts: number;
+    knowledgeItems: number;
+    diaryEntries: number;
+  };
+  recentHistory: Array<{ type: string; title: string; detail: string; date: string }>;
   shortcuts: Array<{ id: string; label: string; topic: string }>;
   emptyState: { title: string; message: string };
 }
@@ -56,6 +66,8 @@ export default function Home() {
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [answer, setAnswer] = useState("");
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState("Sessao local ainda nao iniciada.");
   const [feedback, setFeedback] = useState<JsonRecord | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
@@ -93,6 +105,30 @@ export default function Home() {
   const currentTurn = useMemo(() => session?.turns.find((turn) => !turn.answer), [session]);
   const selectedChallenge = challenges.find((challenge) => challenge.id === selectedChallengeId);
 
+  useEffect(() => {
+    const savedToken = window.localStorage.getItem("etqa.accessToken");
+    if (!savedToken) {
+      return;
+    }
+
+    setIsLoading(true);
+    fetch(`${apiBaseUrl}/auth/me`, { headers: { Authorization: `Bearer ${savedToken}` } })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(await readApiError(response));
+        }
+        setToken(savedToken);
+        setAuthStatus("Sessao restaurada neste navegador.");
+        await loadWorkspace(savedToken);
+      })
+      .catch(() => {
+        window.localStorage.removeItem("etqa.accessToken");
+        setToken("");
+        setAuthStatus("Sessao anterior expirada. Entre novamente.");
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
   async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       ...options,
@@ -103,7 +139,7 @@ export default function Home() {
       }
     });
     if (!response.ok) {
-      throw new Error(`Falha em ${path}: ${response.status}`);
+      throw new Error(await readApiError(response));
     }
     return response.json() as Promise<T>;
   }
@@ -111,15 +147,20 @@ export default function Home() {
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setIsLoading(true);
     try {
       const data = await api<{ accessToken: string; user: User }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password })
       });
       setToken(data.accessToken);
+      window.localStorage.setItem("etqa.accessToken", data.accessToken);
+      setAuthStatus(`Sessao autenticada para ${data.user.name}.`);
       await loadWorkspace(data.accessToken);
-    } catch {
-      setMessage(`Nao foi possivel entrar. Confirme API em ${apiBaseUrl} e credenciais locais.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : `Nao foi possivel conectar na API em ${apiBaseUrl}.`);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -251,9 +292,11 @@ export default function Home() {
   }
 
   function logout() {
+    window.localStorage.removeItem("etqa.accessToken");
     setToken("");
     setDashboard(null);
     setSession(null);
+    setAuthStatus("Sessao encerrada neste navegador.");
     setMessage("Sessao encerrada no cliente.");
   }
 
@@ -275,7 +318,8 @@ export default function Home() {
           <h2>Entrar</h2>
           <label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} /></label>
           <label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-          <button type="submit">Entrar no coach</button>
+          <button type="submit" disabled={isLoading}>{isLoading ? "Entrando..." : "Entrar no coach"}</button>
+          <p className="helper-text">{authStatus}</p>
           {message ? <p className="status-message">{message}</p> : null}
         </form>
       ) : (
@@ -293,6 +337,28 @@ export default function Home() {
                 <strong>{dashboard.interviewReadiness.nextBestAction}</strong>
               </article>
               <article className="panel wide">
+                <h2>Prioridades</h2>
+                <div className="priority-grid">
+                  {dashboard.priorityCards.map((card) => (
+                    <div className={`priority-card ${card.severity}`} key={card.id}>
+                      <span>{card.title}</span>
+                      <strong>{card.score || "novo"}</strong>
+                      <p>{card.action}</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="panel wide">
+                <h2>Progresso semanal</h2>
+                <div className="metric-row">
+                  <div><span>Entrevistas</span><strong>{dashboard.weeklyProgress.completedSessions}</strong></div>
+                  <div><span>Perguntas</span><strong>{dashboard.weeklyProgress.questionAttempts}</strong></div>
+                  <div><span>Labs</span><strong>{dashboard.weeklyProgress.technicalAttempts}</strong></div>
+                  <div><span>Notas</span><strong>{dashboard.weeklyProgress.knowledgeItems}</strong></div>
+                  <div><span>Diary</span><strong>{dashboard.weeklyProgress.diaryEntries}</strong></div>
+                </div>
+              </article>
+              <article className="panel wide">
                 <h2>Competencias</h2>
                 <div className="competency-grid">
                   {dashboard.competencies.map((competency) => (
@@ -301,6 +367,22 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+              </article>
+              <article className="panel wide">
+                <h2>Historico resumido</h2>
+                {dashboard.recentHistory.length ? (
+                  <div className="history-list">
+                    {dashboard.recentHistory.map((item) => (
+                      <div key={`${item.type}-${item.date}-${item.title}`}>
+                        <span>{item.type}</span>
+                        <strong>{item.title}</strong>
+                        <p>{item.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>{dashboard.emptyState.message}</p>
+                )}
               </article>
               <article className="panel wide">
                 <h2>Atalhos</h2>
@@ -396,4 +478,14 @@ export default function Home() {
       )}
     </main>
   );
+}
+
+async function readApiError(response: Response) {
+  try {
+    const data = (await response.json()) as { message?: string | string[]; error?: string };
+    const message = Array.isArray(data.message) ? data.message.join(" ") : data.message;
+    return message ?? data.error ?? `Falha na requisicao: ${response.status}`;
+  } catch {
+    return `Falha na requisicao: ${response.status}`;
+  }
 }
