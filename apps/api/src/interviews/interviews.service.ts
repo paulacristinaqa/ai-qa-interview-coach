@@ -80,7 +80,7 @@ export class InterviewsService {
         });
       }
 
-      if (session.turns.length < 3) {
+      if (session.turns.length < 4) {
         await this.prisma.interviewTurn.create({
           data: {
             sessionId,
@@ -105,7 +105,7 @@ export class InterviewsService {
       currentTurn.coachNote = this.buildCoachNote(session.language, request.answer);
     }
 
-    if (session.turns.length < 3) {
+    if (session.turns.length < 4) {
       session.turns.push({
         orderIndex: session.turns.length + 1,
         question: this.buildFollowUpQuestion(session.language, session.topic, request.answer, session.turns.length + 1)
@@ -213,11 +213,11 @@ export class InterviewsService {
     if (language === "en") {
       return tooLong
         ? "Your answer is detailed, but it may be too long for an interview. Try a clearer structure: context, action, result, learning."
-        : "Good start. Keep the answer concrete and use interview-friendly structure: situation, action, result, and technical reasoning.";
+        : "Good start. Make the next answer sharper: context, action, evidence, trade-off, and result.";
     }
 
     return tooLong
       ? "A resposta esta detalhada, mas pode estar longa para entrevista. Tente estruturar em contexto, acao, resultado e aprendizado."
-      : "Bom inicio. Mantenha a resposta concreta e com estrutura de entrevista: situacao, acao, resultado e raciocinio tecnico.";
+      : "Bom inicio. Deixe a proxima resposta mais forte: contexto, acao, evidencia, trade-off e resultado.";
   }
 }

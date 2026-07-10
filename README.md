@@ -154,7 +154,7 @@ Endpoint:
 
 ### Simulador Textual de Entrevista
 
-Permite iniciar uma entrevista em PT-BR ou ingles, configurar cargo, senioridade, tema e dificuldade, responder perguntas e receber follow-ups.
+Permite iniciar uma entrevista em PT-BR ou ingles, configurar cargo, senioridade, tema e dificuldade, responder perguntas, receber follow-ups, salvar respostas e finalizar a sessao. A tela mostra o historico da conversa com botoes claros para responder, finalizar e gerar feedback.
 
 Endpoints:
 
@@ -174,7 +174,7 @@ Endpoints:
 
 ### Feedback Estruturado
 
-Depois de finalizar uma entrevista, gera um feedback por dimensoes, com resumo, nivel de confianca, evidencias e recomendacoes acionaveis.
+Depois de finalizar uma entrevista, gera um feedback por dimensoes, com resumo, nivel de confianca, evidencias e recomendacoes acionaveis. Para sessoes em ingles, inclui naturalidade, vocabulario tecnico e sugestoes de frases de entrevista.
 
 Endpoint:
 
@@ -193,7 +193,7 @@ Endpoints:
 
 ### Guided Learning
 
-Oferece ajuda progressiva antes de entregar uma resposta completa. A usuaria pode pedir dica ou exemplo e tentar novamente.
+Oferece ajuda progressiva antes de entregar uma resposta completa. A usuaria pode pedir dica curta, explicacao, exemplo e resposta modelo. A resposta modelo fica bloqueada ate a pessoa passar por dica, explicacao e exemplo, estimulando raciocinio antes de revelar a resposta completa.
 
 Endpoint:
 

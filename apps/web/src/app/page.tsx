@@ -63,6 +63,7 @@ interface TechnicalChallenge {
 type JsonRecord = Record<string, unknown>;
 type GrillMode = "standard" | "light-pressure" | "realistic";
 type GrillLevel = "basic" | "intermediate" | "advanced";
+type HelpLevel = "hint" | "explanation" | "example" | "model-answer";
 
 interface GrillMeResponse {
   mode: GrillMode;
@@ -77,6 +78,21 @@ interface QuestionTopic {
   competency: string;
 }
 
+interface FeedbackReport {
+  overallSummary: string;
+  confidenceLevel: string;
+  dimensions: Array<{ dimension: string; score: number; evidence: string; recommendation: string }>;
+}
+
+interface LearningEvent {
+  helpLevel: HelpLevel;
+  content: {
+    blocked?: boolean;
+    explanation?: string;
+    nextPrompt?: string;
+  };
+}
+
 export default function Home() {
   const [email, setEmail] = useState("paula@example.com");
   const [password, setPassword] = useState("change-me-locally");
@@ -87,11 +103,11 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState("Sessao local ainda nao iniciada.");
-  const [feedback, setFeedback] = useState<JsonRecord | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackReport | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [questionAnswer, setQuestionAnswer] = useState("");
   const [questionResult, setQuestionResult] = useState<JsonRecord | null>(null);
-  const [hint, setHint] = useState<JsonRecord | null>(null);
+  const [hint, setHint] = useState<LearningEvent | null>(null);
   const [questionTopics, setQuestionTopics] = useState<QuestionTopic[]>([]);
   const [questionBankCount, setQuestionBankCount] = useState(0);
   const [grillSession, setGrillSession] = useState<InterviewSession | null>(null);
@@ -247,7 +263,7 @@ export default function Home() {
 
   async function generateFeedback() {
     if (!session) return;
-    setFeedback(await api<JsonRecord>(`/feedback/sessions/${session.id}`, { method: "POST" }));
+    setFeedback(await api<FeedbackReport>(`/feedback/sessions/${session.id}`, { method: "POST" }));
   }
 
   async function startGrillMe() {
@@ -301,18 +317,25 @@ export default function Home() {
     await loadWorkspace();
   }
 
-  async function askHint(helpLevel: "hint" | "example") {
+  async function askHint(helpLevel: HelpLevel) {
     setHint(
-      await api<JsonRecord>("/learning/hint", {
+      await api<LearningEvent>("/learning/hint", {
         method: "POST",
         body: JSON.stringify({
           concept: question?.topic ?? interviewConfig.topic,
           helpLevel,
           sessionId: session?.id,
-          language: interviewConfig.language
+          language: question?.language ?? interviewConfig.language
         })
       })
     );
+  }
+
+  function retryWithLearningPrompt() {
+    const nextPrompt = hint?.content?.nextPrompt;
+    if (nextPrompt) {
+      setQuestionAnswer(nextPrompt);
+    }
   }
 
   async function submitLab(event: FormEvent<HTMLFormElement>) {
@@ -495,7 +518,7 @@ export default function Home() {
                 <div className="session-meta"><span>{grillSession.language}</span><span>{grillSession.topic}</span><span>{grillConfig.mode}</span><span>{grillSession.status}</span></div>
                 <ol className="turns">
                   {grillSession.turns.map((turn) => (
-                    <li key={turn.orderIndex}><strong>{turn.question}</strong>{turn.answer ? <p>{turn.answer}</p> : null}{turn.coachNote ? <em>{turn.coachNote}</em> : null}</li>
+                    <li className="conversation-turn" key={turn.orderIndex}><strong>{turn.question}</strong>{turn.answer ? <p className="answer-bubble">{turn.answer}</p> : null}{turn.coachNote ? <em>{turn.coachNote}</em> : null}</li>
                   ))}
                 </ol>
                 {currentGrillTurn && grillSession.status === "started" ? (
@@ -525,7 +548,7 @@ export default function Home() {
                 <div className="session-meta"><span>{session.language}</span><span>{session.topic}</span><span>{session.status}</span></div>
                 <ol className="turns">
                   {session.turns.map((turn) => (
-                    <li key={turn.orderIndex}><strong>{turn.question}</strong>{turn.answer ? <p>{turn.answer}</p> : null}{turn.coachNote ? <em>{turn.coachNote}</em> : null}</li>
+                    <li className="conversation-turn" key={turn.orderIndex}><strong>{turn.question}</strong>{turn.answer ? <p className="answer-bubble">{turn.answer}</p> : null}{turn.coachNote ? <em>{turn.coachNote}</em> : null}</li>
                   ))}
                 </ol>
                 {currentTurn && session.status === "started" ? (
@@ -533,8 +556,25 @@ export default function Home() {
                     <label>Sua resposta<textarea value={answer} onChange={(event) => setAnswer(event.target.value)} rows={5} /></label>
                     <div className="actions"><button>Enviar resposta</button><button className="ghost-button" type="button" onClick={completeInterview}>Finalizar</button></div>
                   </form>
-                ) : <button onClick={generateFeedback}>Gerar feedback</button>}
-                {feedback ? <pre>{JSON.stringify(feedback, null, 2)}</pre> : null}
+                ) : <button onClick={generateFeedback}>Gerar feedback estruturado</button>}
+                {feedback ? (
+                  <div className="feedback-panel">
+                    <div>
+                      <span>Confianca: {feedback.confidenceLevel}</span>
+                      <p>{feedback.overallSummary}</p>
+                    </div>
+                    <div className="feedback-grid">
+                      {feedback.dimensions.map((dimension) => (
+                        <div className="feedback-card" key={dimension.dimension}>
+                          <span>{dimension.dimension}</span>
+                          <strong>{Math.round(dimension.score)}</strong>
+                          <p>{dimension.recommendation}</p>
+                          <small>{dimension.evidence}</small>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>
@@ -557,9 +597,21 @@ export default function Home() {
               ) : null}
               <form className="answer-form" onSubmit={submitQuestion}>
                 <label>Resposta<textarea rows={4} value={questionAnswer} onChange={(event) => setQuestionAnswer(event.target.value)} /></label>
-                <div className="actions"><button>Responder</button><button type="button" className="ghost-button" onClick={() => askHint("hint")}>Dica</button><button type="button" className="ghost-button" onClick={() => askHint("example")}>Exemplo</button></div>
+                <div className="actions">
+                  <button>Responder</button>
+                  <button type="button" className="ghost-button" onClick={() => askHint("hint")}>Dica</button>
+                  <button type="button" className="ghost-button" onClick={() => askHint("explanation")}>Explicacao</button>
+                  <button type="button" className="ghost-button" onClick={() => askHint("example")}>Exemplo</button>
+                  <button type="button" className="ghost-button" onClick={() => askHint("model-answer")}>Resposta modelo</button>
+                </div>
               </form>
-              {hint ? <pre>{JSON.stringify(hint, null, 2)}</pre> : null}
+              {hint ? (
+                <div className={`learning-card ${hint.content.blocked ? "blocked" : ""}`}>
+                  <span>{hint.helpLevel}</span>
+                  <p>{hint.content.explanation}</p>
+                  {hint.content.nextPrompt ? <button type="button" className="ghost-button" onClick={retryWithLearningPrompt}>Usar como nova tentativa</button> : null}
+                </div>
+              ) : null}
               {questionResult ? <pre>{JSON.stringify(questionResult, null, 2)}</pre> : null}
             </article>
 

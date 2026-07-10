@@ -275,6 +275,19 @@ button:disabled {
   border-radius: 8px;
 }
 
+.conversation-turn {
+  display: grid;
+  gap: 10px;
+}
+
+.answer-bubble {
+  margin: 0;
+  padding: 12px;
+  background: #e7f0ee;
+  border-radius: 8px;
+  color: var(--accent-strong);
+}
+
 .turns strong {
   display: block;
   margin-bottom: 8px;
@@ -294,6 +307,54 @@ button:disabled {
   background: #f9fafc;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.feedback-panel,
+.learning-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f9fafc;
+}
+
+.feedback-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.feedback-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.feedback-card span,
+.learning-card span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.feedback-card strong {
+  color: var(--accent-strong);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.feedback-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.learning-card.blocked {
+  border-left: 4px solid var(--priority);
 }
 
 pre {
