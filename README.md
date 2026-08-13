@@ -74,11 +74,13 @@ docker compose up -d postgres
 
 O banco local esperado e:
 
-- Host: `localhost`
-- Porta: `5432`
+- Host: `127.0.0.1`
+- Porta no host: `5433`
 - Database: `etqa_interview_coach`
 - Usuario: `etqa`
 - Senha: `etqa_password`
+
+A porta do host e configuravel por `POSTGRES_HOST_PORT`. O container continua usando `5432` internamente; `5433` evita conflito com uma instalacao local do PostgreSQL.
 
 Se o comando `docker` nao existir no terminal, abra/instale o Docker Desktop ou suba um PostgreSQL manualmente com esses mesmos dados.
 
@@ -91,12 +93,24 @@ npm.cmd run prisma:generate
 ### 5. Aplicar migracoes
 
 ```powershell
-npm.cmd run prisma:migrate
+npm.cmd run db:wait
+npm.cmd run prisma:migrate:deploy
+npm.cmd run prisma:migrate:status
+npm.cmd run seed
 ```
 
-Esse comando cria as tabelas do MVP: usuarios, entrevistas, feedbacks, banco de perguntas, tentativas, laboratorio tecnico, knowledge base, CRI e diary.
+Esses comandos aguardam o banco, aplicam as migrations versionadas, confirmam o estado e executam a carga inicial. Para criar uma nova migration durante desenvolvimento, use `npm.cmd run prisma:migrate`.
 
-### 6. Rodar a aplicacao
+### 6. Validar o projeto
+
+```powershell
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run test
+npm.cmd run build
+```
+
+### 7. Rodar a aplicacao
 
 Opcao A: rodar API e Web juntos.
 
@@ -124,7 +138,7 @@ URLs locais:
 - API health check: `http://localhost:3001/api/v1/health`
 - API readiness com banco: `http://localhost:3001/api/v1/health/readiness`
 
-### 7. Entrar no MVP
+### 8. Entrar no MVP
 
 Abra `http://localhost:3000` e use:
 
@@ -270,15 +284,20 @@ Endpoints:
 - `npm.cmd run dev:web`: inicia apenas a Web.
 - `npm.cmd run build`: compila API e Web.
 - `npm.cmd run lint`: roda verificacao TypeScript nos workspaces.
+- `npm.cmd run typecheck`: confirma os tipos da API e Web.
 - `npm.cmd run test`: roda testes dos workspaces.
 - `npm.cmd run test:e2e`: roda smoke E2E contra API local ja iniciada.
-- `npm.cmd run setup:local`: executa setup local com install, Postgres via Docker quando disponivel, Prisma, lint e testes.
+- `npm.cmd run setup:local`: executa install, Prisma Client, PostgreSQL, migrations, seed, lint, typecheck, testes e build.
 - `npm.cmd run prisma:generate`: gera Prisma Client.
-- `npm.cmd run prisma:migrate`: aplica migracoes no banco local.
+- `npm.cmd run db:wait`: aguarda o PostgreSQL aceitar consultas.
+- `npm.cmd run prisma:migrate`: cria migrations durante desenvolvimento.
+- `npm.cmd run prisma:migrate:deploy`: aplica migrations existentes sem prompts interativos.
+- `npm.cmd run prisma:migrate:status`: confirma o estado das migrations.
+- `npm.cmd run seed`: executa a carga inicial idempotente.
 
 ## Qualidade e CI
 
-O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate/migrate, lint, testes e build.
+O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes e build.
 
 Para smoke E2E local:
 
@@ -307,11 +326,13 @@ Abra o Docker Desktop e tente novamente. Se ainda falhar, confirme se o Docker e
 
 ### `Prisma cannot reach database`
 
-Confirme se o PostgreSQL esta rodando em `localhost:5432` e se o `DATABASE_URL` do `.env` aponta para:
+Confirme se o container esta saudavel com `docker compose ps`, rode `npm.cmd run db:wait` e verifique se o `DATABASE_URL` do `.env` aponta para:
 
 ```text
-postgresql://etqa:etqa_password@localhost:5432/etqa_interview_coach?schema=public
+postgresql://etqa:etqa_password@127.0.0.1:5433/etqa_interview_coach?schema=public
 ```
+
+Se aparecer `port is already allocated` em `5432`, mantenha `POSTGRES_HOST_PORT=5433`. Se aparecer `P1000`, outra instancia esta respondendo na porta configurada ou as credenciais do `.env` nao correspondem ao container.
 
 ### Frontend nao conecta na API
 

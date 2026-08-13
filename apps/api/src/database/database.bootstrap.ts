@@ -43,6 +43,23 @@ const levelNames: Record<number, { pt: string; en: string }> = {
   3: { pt: "avancado", en: "advanced" }
 };
 
+const supplementalAngles = [
+  { type: "technical", focus: "risk analysis", pt: "analise de risco", en: "risk analysis" },
+  { type: "scenario", focus: "incident investigation", pt: "investigacao de incidente", en: "incident investigation" },
+  { type: "technical", focus: "test data strategy", pt: "estrategia de massa de dados", en: "test data strategy" },
+  { type: "scenario", focus: "stakeholder communication", pt: "comunicacao com stakeholders", en: "stakeholder communication" },
+  { type: "technical", focus: "regression strategy", pt: "estrategia de regressao", en: "regression strategy" },
+  { type: "scenario", focus: "production readiness", pt: "prontidao para producao", en: "production readiness" },
+  { type: "technical", focus: "observability", pt: "observabilidade", en: "observability" },
+  { type: "scenario", focus: "prioritization under pressure", pt: "priorizacao sob pressao", en: "prioritization under pressure" },
+  { type: "technical", focus: "root cause reasoning", pt: "raciocinio de causa raiz", en: "root cause reasoning" },
+  { type: "scenario", focus: "ambiguous requirements", pt: "requisitos ambiguos", en: "ambiguous requirements" },
+  { type: "technical", focus: "quality metrics", pt: "metricas de qualidade", en: "quality metrics" },
+  { type: "scenario", focus: "cross-team alignment", pt: "alinhamento entre times", en: "cross-team alignment" },
+  { type: "technical", focus: "automation ROI", pt: "retorno de automacao", en: "automation ROI" },
+  { type: "scenario", focus: "interview follow-up", pt: "follow-up de entrevista", en: "interview follow-up" }
+];
+
 const seededQuestions = buildSeededQuestions();
 
 const seededChallenges = [
@@ -223,23 +240,6 @@ function buildSupplementalQuestions() {
     return combinations.slice(0, 82);
   });
 }
-
-const supplementalAngles = [
-  { type: "technical", focus: "risk analysis", pt: "analise de risco", en: "risk analysis" },
-  { type: "scenario", focus: "incident investigation", pt: "investigacao de incidente", en: "incident investigation" },
-  { type: "technical", focus: "test data strategy", pt: "estrategia de massa de dados", en: "test data strategy" },
-  { type: "scenario", focus: "stakeholder communication", pt: "comunicacao com stakeholders", en: "stakeholder communication" },
-  { type: "technical", focus: "regression strategy", pt: "estrategia de regressao", en: "regression strategy" },
-  { type: "scenario", focus: "production readiness", pt: "prontidao para producao", en: "production readiness" },
-  { type: "technical", focus: "observability", pt: "observabilidade", en: "observability" },
-  { type: "scenario", focus: "prioritization under pressure", pt: "priorizacao sob pressao", en: "prioritization under pressure" },
-  { type: "technical", focus: "root cause reasoning", pt: "raciocinio de causa raiz", en: "root cause reasoning" },
-  { type: "scenario", focus: "ambiguous requirements", pt: "requisitos ambiguos", en: "ambiguous requirements" },
-  { type: "technical", focus: "quality metrics", pt: "metricas de qualidade", en: "quality metrics" },
-  { type: "scenario", focus: "cross-team alignment", pt: "alinhamento entre times", en: "cross-team alignment" },
-  { type: "technical", focus: "automation ROI", pt: "retorno de automacao", en: "automation ROI" },
-  { type: "scenario", focus: "interview follow-up", pt: "follow-up de entrevista", en: "interview follow-up" }
-];
 
 function buildPrompt(language: string, topic: string, subject: string, level: number) {
   const levelLabel = language === "en" ? levelNames[level].en : levelNames[level].pt;
