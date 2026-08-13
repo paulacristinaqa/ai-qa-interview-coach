@@ -147,6 +147,26 @@ Abra `http://localhost:3000` e use:
 
 Ao iniciar a API, o bootstrap cria automaticamente o usuario local, perguntas iniciais e desafios tecnicos se ainda nao existirem no banco.
 
+### Mapa da interface
+
+Depois do login, a navegacao lateral organiza o MVP por dominio:
+
+| Rota | Area | Estado |
+| --- | --- | --- |
+| `/dashboard` | Dashboard e Career Readiness Index | Operacional |
+| `/interviews` | Entrevistas e feedback estruturado | Operacional |
+| `/grill-me` | Treino com pressao e follow-ups | Operacional |
+| `/technical-lab` | Guided Learning, perguntas e desafios | Operacional |
+| `/knowledge-base` | Notas, historico e exportacao | Operacional |
+| `/developer-diary` | Diario, sugestoes e exportacao | Operacional |
+| `/settings` | Sessao local e logout | Operacional |
+| `/career/jobs` | Jobs | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/applications` | Applications | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/companies` | Companies | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/documents` | Documents | Rota preparada, sem funcionalidade nesta etapa |
+
+A rota `/` redireciona para `/dashboard`.
+
 ## Funcionalidades Disponiveis
 
 ### Login
