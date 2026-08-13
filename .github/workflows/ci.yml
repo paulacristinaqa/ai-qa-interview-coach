@@ -47,3 +47,5 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      - name: Run interview feedback and history smoke E2E
+        run: npm run test:e2e:with-api

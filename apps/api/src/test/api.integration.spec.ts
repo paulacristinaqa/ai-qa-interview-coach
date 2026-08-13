@@ -1,0 +1,194 @@
+import "reflect-metadata";
+import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import { Test } from "@nestjs/testing";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { AuthController } from "../auth/auth.controller";
+import { AuthService } from "../auth/auth.service";
+import { CriController } from "../cri/cri.controller";
+import { CriService } from "../cri/cri.service";
+import { DiaryController } from "../diary/diary.controller";
+import { DiaryService } from "../diary/diary.service";
+import { FeedbackController } from "../feedback/feedback.controller";
+import { FeedbackService } from "../feedback/feedback.service";
+import { GrillMeController } from "../grill-me/grill-me.controller";
+import { GrillMeService } from "../grill-me/grill-me.service";
+import { InterviewsController } from "../interviews/interviews.controller";
+import { InterviewsService } from "../interviews/interviews.service";
+import { KnowledgeController } from "../knowledge/knowledge.controller";
+import { KnowledgeService } from "../knowledge/knowledge.service";
+import { LearningController } from "../learning/learning.controller";
+import { LearningService } from "../learning/learning.service";
+import { TechnicalLabController } from "../technical-lab/technical-lab.controller";
+import { TechnicalLabService } from "../technical-lab/technical-lab.service";
+
+describe("main API endpoints", () => {
+  let app: NestFastifyApplication;
+  let authorization: string;
+
+  const feedbackService = {
+    generate: vi.fn().mockResolvedValue({ id: "report-1", overallSummary: "Structured feedback", confidenceLevel: "low", dimensions: [] })
+  };
+  const grillMeService = {
+    start: vi.fn().mockImplementation((_userId, body) => ({
+      mode: body.mode,
+      level: body.level,
+      session: { id: "grill-1", status: "started", turns: [{ orderIndex: 1, question: "How would you test this API?" }] }
+    })),
+    answer: vi.fn()
+  };
+  const learningService = {
+    hint: vi.fn().mockResolvedValue({ id: "event-1", helpLevel: "hint", content: { explanation: "Start with risk" } })
+  };
+  const technicalLabService = {
+    list: vi.fn().mockResolvedValue([{ id: "lab-1", title: "API challenge" }]),
+    attempt: vi.fn().mockResolvedValue({ id: "attempt-1", feedback: { score: 80 } }),
+    reveal: vi.fn()
+  };
+  const knowledgeService = {
+    list: vi.fn().mockResolvedValue([]),
+    history: vi.fn().mockResolvedValue({ interviews: [{ id: "session-1" }], questionAttempts: [], technicalAttempts: [] }),
+    exportMarkdown: vi.fn(),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "note-1", userId, ...body })),
+    update: vi.fn()
+  };
+  const criService = {
+    current: vi.fn().mockResolvedValue({ score: 58, confidenceLevel: "low", composition: { evidenceCount: 1 }, evidenceGaps: [] })
+  };
+  const diaryService = {
+    list: vi.fn().mockResolvedValue([{ id: "entry-1", title: "Coverage" }]),
+    exportMarkdown: vi.fn(),
+    suggestions: vi.fn(),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "entry-1", userId, ...body })),
+    update: vi.fn()
+  };
+
+  beforeAll(async () => {
+    Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, InterviewsService], InterviewsController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, GrillMeService], GrillMeController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, FeedbackService], FeedbackController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, LearningService], LearningController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, TechnicalLabService], TechnicalLabController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, KnowledgeService], KnowledgeController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, CriService], CriController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, DiaryService], DiaryController);
+
+    const moduleRef = await Test.createTestingModule({
+      controllers: [
+        AuthController,
+        InterviewsController,
+        GrillMeController,
+        FeedbackController,
+        LearningController,
+        TechnicalLabController,
+        KnowledgeController,
+        CriController,
+        DiaryController
+      ],
+      providers: [
+        AuthService,
+        { provide: InterviewsService, useValue: new InterviewsService() },
+        { provide: GrillMeService, useValue: grillMeService },
+        { provide: FeedbackService, useValue: feedbackService },
+        { provide: LearningService, useValue: learningService },
+        { provide: TechnicalLabService, useValue: technicalLabService },
+        { provide: KnowledgeService, useValue: knowledgeService },
+        { provide: CriService, useValue: criService },
+        { provide: DiaryService, useValue: diaryService }
+      ]
+    }).compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+    app.setGlobalPrefix("api/v1");
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: { email: "paula@example.com", password: "change-me-locally" }
+    });
+    expect(login.statusCode).toBe(201);
+    authorization = `Bearer ${login.json().accessToken}`;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("starts an interview, accepts an answer and returns feedback", async () => {
+    const started = await app.inject({
+      method: "POST",
+      url: "/api/v1/interviews",
+      headers: { authorization },
+      payload: { language: "en", targetRole: "QA Engineer", seniority: "Senior", topic: "API Testing", difficulty: "advanced" }
+    });
+    expect(started.statusCode).toBe(201);
+    const session = started.json();
+
+    const answered = await app.inject({
+      method: "POST",
+      url: `/api/v1/interviews/${session.id}/answers`,
+      headers: { authorization },
+      payload: { answer: "I would validate the contract and error paths." }
+    });
+    expect(answered.statusCode).toBe(201);
+    expect(answered.json().turns[0].answer).toContain("contract");
+
+    const feedback = await app.inject({
+      method: "POST",
+      url: `/api/v1/feedback/sessions/${session.id}`,
+      headers: { authorization }
+    });
+    expect(feedback.statusCode).toBe(201);
+    expect(feedback.json().id).toBe("report-1");
+  });
+
+  it("routes Grill Me, Guided Learning and Technical Lab", async () => {
+    const grill = await app.inject({
+      method: "POST",
+      url: "/api/v1/grill-me/sessions",
+      headers: { authorization },
+      payload: { topic: "API Testing", language: "en", level: "advanced", mode: "realistic" }
+    });
+    const learning = await app.inject({
+      method: "POST",
+      url: "/api/v1/learning/hint",
+      headers: { authorization },
+      payload: { concept: "SQL", helpLevel: "hint" }
+    });
+    const labs = await app.inject({ method: "GET", url: "/api/v1/technical-lab/challenges", headers: { authorization } });
+
+    expect([grill.statusCode, learning.statusCode, labs.statusCode]).toEqual([201, 201, 200]);
+    expect(grill.json().session.status).toBe("started");
+    expect(learning.json().helpLevel).toBe("hint");
+  });
+
+  it("routes Knowledge, CRI and Developer Diary for the authenticated user", async () => {
+    const note = await app.inject({
+      method: "POST",
+      url: "/api/v1/knowledge",
+      headers: { authorization },
+      payload: { type: "learning", title: "API", body: "Evidence" }
+    });
+    const history = await app.inject({ method: "GET", url: "/api/v1/knowledge/history", headers: { authorization } });
+    const cri = await app.inject({ method: "GET", url: "/api/v1/cri/current", headers: { authorization } });
+    const diary = await app.inject({
+      method: "POST",
+      url: "/api/v1/diary/entries",
+      headers: { authorization },
+      payload: { entryType: "changelog", title: "Coverage" }
+    });
+
+    expect([note.statusCode, history.statusCode, cri.statusCode, diary.statusCode]).toEqual([201, 200, 200, 201]);
+    expect(note.json().userId).toBe("single-user");
+    expect(history.json().interviews[0].id).toBe("session-1");
+    expect(cri.json().score).toBe(58);
+    expect(diary.json().userId).toBe("single-user");
+  });
+
+  it("rejects protected endpoints without a bearer token", async () => {
+    const response = await app.inject({ method: "GET", url: "/api/v1/cri/current" });
+    expect(response.statusCode).toBe(401);
+  });
+});

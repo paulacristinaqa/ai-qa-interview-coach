@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { NotFoundException } from "@nestjs/common";
+import { describe, expect, it, vi } from "vitest";
+import { PrismaService } from "../database/prisma.service";
 import { InterviewsService } from "./interviews.service";
 
 describe("InterviewsService", () => {
@@ -31,5 +33,22 @@ describe("InterviewsService", () => {
 
     expect(updated.turns[0].answer).toContain("validaria");
     expect(updated.turns[1].question).toContain("SQL");
+  });
+
+  it("persists a completed session through Prisma", async () => {
+    const persisted = {
+      id: "session-1", language: "en", targetRole: "QA", seniority: "Senior", topic: "API", difficulty: "advanced",
+      interviewerStyle: null, status: "completed", startedAt: new Date("2026-07-13T10:00:00Z"), turns: []
+    };
+    const prisma = { interviewSession: { update: vi.fn().mockResolvedValue(persisted) } } as unknown as PrismaService;
+
+    const result = await new InterviewsService(prisma).complete("session-1");
+
+    expect(result.status).toBe("completed");
+    expect(prisma.interviewSession.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "session-1" } }));
+  });
+
+  it("rejects an unknown in-memory session", async () => {
+    await expect(new InterviewsService().get("missing")).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -307,6 +307,7 @@ Endpoints:
 - `npm.cmd run typecheck`: confirma os tipos da API e Web.
 - `npm.cmd run test`: roda testes dos workspaces.
 - `npm.cmd run test:e2e`: roda smoke E2E contra API local ja iniciada.
+- `npm.cmd run test:e2e:with-api`: aguarda o PostgreSQL, inicia a API compilada, roda o smoke E2E e encerra a API.
 - `npm.cmd run setup:local`: executa install, Prisma Client, PostgreSQL, migrations, seed, lint, typecheck, testes e build.
 - `npm.cmd run prisma:generate`: gera Prisma Client.
 - `npm.cmd run db:wait`: aguarda o PostgreSQL aceitar consultas.
@@ -317,12 +318,21 @@ Endpoints:
 
 ## Qualidade e CI
 
-O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes e build.
+O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
+
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI e Developer Diary. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo: iniciar entrevista, responder, receber follow-up e feedback, atualizar o CRI e registrar a evidencia no historico e no Developer Diary.
 
 Para smoke E2E local:
 
-1. Suba banco, API e Web com `npm.cmd run dev`.
-2. Em outro terminal, rode:
+1. Execute o build e mantenha o PostgreSQL preparado com migrations e seed.
+2. Rode o fluxo gerenciado:
+
+```powershell
+npm.cmd run build
+npm.cmd run test:e2e:with-api
+```
+
+Se a API ja estiver ativa em outro terminal, use somente:
 
 ```powershell
 npm.cmd run test:e2e

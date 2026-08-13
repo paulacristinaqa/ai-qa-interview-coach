@@ -15,6 +15,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "test": "npm run test --workspaces",
     "test:e2e": "node tests/e2e/smoke.mjs",
+    "test:e2e:with-api": "node scripts/run-e2e-with-api.mjs",
     "setup:local": "powershell -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "prisma:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
