@@ -6,7 +6,9 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "seed": "nest build && node dist/database/seed.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
@@ -24,6 +26,6 @@
     "@types/node": "^20.17.10",
     "prisma": "^5.22.0",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.9"
+    "vitest": "3.2.7"
   }
 }
