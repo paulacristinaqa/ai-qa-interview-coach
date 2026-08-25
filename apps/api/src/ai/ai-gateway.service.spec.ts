@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AiGateway } from "./ai-gateway.service";
-import { createAiRequest } from "./ai-requests";
+import { createPromptRequest } from "./prompts/prompt-template.registry";
 import { MockAiProvider } from "./mock-ai.provider";
 import { OllamaAiProvider, OllamaProviderError } from "./ollama-ai.provider";
 
-const request = createAiRequest("guided-learning.explanation", {
+const request = createPromptRequest("guided-learning.explanation", {
   language: "en",
   userInput: "SQL",
   context: { concept: "SQL", helpLevel: "hint" }

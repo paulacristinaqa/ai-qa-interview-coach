@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { AiGateway } from "../ai/ai-gateway.service";
-import { createAiRequest } from "../ai/ai-requests";
+import { createPromptRequest } from "../ai/prompts/prompt-template.registry";
 import { PrismaService } from "../database/prisma.service";
 import {
   InterviewLanguage,
@@ -228,7 +228,7 @@ export class InterviewsService {
   ) {
     if (!this.ai) return fallbackQuestion;
     const generated = await this.ai.generate<{ question: string }>(
-      createAiRequest(templateId, { language, userInput: JSON.stringify(context), context }),
+      createPromptRequest(templateId, { language, userInput: JSON.stringify(context), context }),
       { question: fallbackQuestion }
     );
     return generated.output.question;

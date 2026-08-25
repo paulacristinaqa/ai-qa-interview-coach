@@ -1,4 +1,10 @@
-export type AiTask = "interview-question" | "answer-feedback" | "guided-learning" | "grill-me-question";
+export type AiTask =
+  | "interview-question"
+  | "answer-feedback"
+  | "guided-learning"
+  | "grill-me-question"
+  | "technical-lab-feedback"
+  | "career-analysis";
 
 export interface AiProviderRequest {
   templateId: string;
@@ -7,6 +13,7 @@ export interface AiProviderRequest {
   systemInstruction: string;
   userInput: string;
   context: Record<string, unknown>;
+  criteria: string[];
   promptTemplateVersion: string;
   outputSchema: Record<string, unknown>;
 }

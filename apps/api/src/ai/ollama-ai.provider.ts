@@ -59,6 +59,7 @@ export class OllamaAiProvider implements AiProvider {
                 language: request.language,
                 input: request.userInput,
                 context: request.context,
+                criteria: request.criteria,
                 outputSchema: request.outputSchema
               })
             }
