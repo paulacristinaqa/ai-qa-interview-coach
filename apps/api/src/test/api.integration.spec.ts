@@ -18,6 +18,8 @@ import { KnowledgeController } from "../knowledge/knowledge.controller";
 import { KnowledgeService } from "../knowledge/knowledge.service";
 import { JobsController } from "../jobs/jobs.controller";
 import { JobsService } from "../jobs/jobs.service";
+import { JobAnalysisController } from "../jobs/job-analysis.controller";
+import { JobAnalysisService } from "../jobs/job-analysis.service";
 import { LearningController } from "../learning/learning.controller";
 import { LearningService } from "../learning/learning.service";
 import { TechnicalLabController } from "../technical-lab/technical-lab.controller";
@@ -70,6 +72,14 @@ describe("main API endpoints", () => {
     update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
     remove: vi.fn().mockResolvedValue(undefined)
   };
+  const jobAnalysisService = {
+    analyze: vi.fn().mockResolvedValue({
+      id: "analysis-1",
+      opportunityId: "job-1",
+      technicalSummary: "API-focused QA role",
+      profileFit: { score: 70, summary: "Evidence-based fit", evidence: ["CRI"] }
+    })
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -82,6 +92,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, CriService], CriController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, DiaryService], DiaryController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobsService], JobsController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService], JobAnalysisController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -94,7 +105,8 @@ describe("main API endpoints", () => {
         KnowledgeController,
         CriController,
         DiaryController,
-        JobsController
+        JobsController,
+        JobAnalysisController
       ],
       providers: [
         AuthService,
@@ -106,7 +118,8 @@ describe("main API endpoints", () => {
         { provide: KnowledgeService, useValue: knowledgeService },
         { provide: CriService, useValue: criService },
         { provide: DiaryService, useValue: diaryService },
-        { provide: JobsService, useValue: jobsService }
+        { provide: JobsService, useValue: jobsService },
+        { provide: JobAnalysisService, useValue: jobAnalysisService }
       ]
     }).compile();
 
@@ -240,5 +253,17 @@ describe("main API endpoints", () => {
     expect([created.statusCode, listed.statusCode, updated.statusCode, removed.statusCode]).toEqual([201, 200, 200, 204]);
     expect(created.json()).toMatchObject({ id: "job-1", userId: "single-user" });
     expect(jobsService.list).toHaveBeenCalledWith("single-user", expect.objectContaining({ status: "saved", favorite: true }));
+  });
+
+  it("routes structured analysis for an owned job opportunity", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/jobs/job-1/analyze",
+      headers: { authorization }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ id: "analysis-1", opportunityId: "job-1" });
+    expect(jobAnalysisService.analyze).toHaveBeenCalledWith("single-user", "job-1");
   });
 });

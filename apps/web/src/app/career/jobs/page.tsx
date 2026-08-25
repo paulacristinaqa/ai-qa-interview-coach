@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../components/auth-provider";
 import { PageHeader, StatusMessage } from "../../../components/page";
-import type { JobOpportunity, JobStatus, WorkModel } from "../../../lib/types";
+import type { JobAnalysis, JobOpportunity, JobStatus, WorkModel } from "../../../lib/types";
 import {
   buildJobQuery,
   JobFilters,
@@ -54,6 +54,7 @@ export default function JobsPage() {
   const [detail, setDetail] = useState<JobOpportunity | null>(null);
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const selected = detail?.id === selectedId ? detail : items.find((item) => item.id === selectedId) ?? null;
 
   const load = useCallback(async () => {
@@ -145,6 +146,20 @@ export default function JobsPage() {
     }
   }
 
+  async function analyze(job: JobOpportunity) {
+    setIsAnalyzing(true);
+    try {
+      const analysis = await api<JobAnalysis>(`/jobs/${job.id}/analyze`, { method: "POST" });
+      setDetail({ ...job, analysis });
+      setItems((current) => current.map((item) => item.id === job.id ? { ...item, analysis } : item));
+      setMessage(`Analise atualizada com o provider ${analysis.providerName}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Nao foi possivel analisar a vaga.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -200,7 +215,15 @@ export default function JobsPage() {
           </div>
         </section>
       </div>
-      {selected ? <JobOpportunityDetail job={selected} onEdit={() => edit(selected)} onDelete={() => void remove(selected)} /> : null}
+      {selected ? (
+        <JobOpportunityDetail
+          job={selected}
+          onEdit={() => edit(selected)}
+          onDelete={() => void remove(selected)}
+          onAnalyze={() => void analyze(selected)}
+          isAnalyzing={isAnalyzing}
+        />
+      ) : null}
     </>
   );
 }

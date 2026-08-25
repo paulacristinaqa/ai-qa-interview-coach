@@ -324,6 +324,10 @@ Permite cadastrar oportunidades manualmente em `/career/jobs`, sem scraping ou i
 
 A tela oferece criacao, listagem, busca, filtros por status, modelo, senioridade e favorito, detalhe, edicao e exclusao. Todas as operacoes sao vinculadas ao usuario autenticado.
 
+No detalhe, `Analisar vaga` gera e persiste uma leitura estruturada da descricao original: resumo tecnico, responsabilidades, requisitos obrigatorios e desejaveis, tecnologias, soft skills, senioridade estimada, aderencia ao perfil, lacunas e plano de preparacao. A aderencia usa apenas evidencias existentes no CRI, banco de perguntas e Technical Lab.
+
+Com `AI_PROVIDER=mock`, a analise e local e deterministica. Com `AI_PROVIDER=ollama`, o modelo local pode enriquecer a estrutura; se estiver indisponivel, o gateway retorna automaticamente ao mock. Toda saida e validada pelo schema `career.job-analysis@1.0.0` antes de ser gravada.
+
 Endpoints:
 
 - `GET /api/v1/job-opportunities`
@@ -331,6 +335,7 @@ Endpoints:
 - `POST /api/v1/job-opportunities`
 - `PATCH /api/v1/job-opportunities/:opportunityId`
 - `DELETE /api/v1/job-opportunities/:opportunityId`
+- `POST /api/v1/jobs/:opportunityId/analyze`
 
 Os contratos completos estao registrados em `docs/api/openapi.yaml`.
 
@@ -369,7 +374,8 @@ Endpoints:
 19. Exportar Knowledge Base ou Diary em Markdown.
 20. Abrir Career Intelligence > Jobs e cadastrar uma oportunidade manual.
 21. Filtrar a oportunidade, abrir o detalhe e editar status ou observacoes.
-22. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+22. Clicar em `Analisar vaga` e conferir aderencia, requisitos, lacunas e plano de preparacao.
+23. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 

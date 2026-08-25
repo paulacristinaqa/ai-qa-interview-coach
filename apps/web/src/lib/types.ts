@@ -115,4 +115,25 @@ export interface JobOpportunity {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  analysis?: JobAnalysis | null;
+}
+
+export interface JobAnalysis {
+  id: string;
+  opportunityId: string;
+  technicalSummary: string;
+  responsibilities: string[];
+  requiredRequirements: string[];
+  preferredRequirements: string[];
+  technologies: string[];
+  softSkills: string[];
+  estimatedSeniority: string;
+  profileFit: { score: number; summary: string; evidence: string[] };
+  gaps: string[];
+  preparationPlan: Array<{ priority: "high" | "medium" | "low"; action: string; rationale: string }>;
+  providerName: string;
+  modelName: string;
+  promptTemplateVersion: string;
+  createdAt: string;
+  updatedAt: string;
 }
