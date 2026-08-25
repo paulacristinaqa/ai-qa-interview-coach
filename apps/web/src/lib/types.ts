@@ -95,3 +95,24 @@ export interface CriResponse {
     nextBestAction: string;
   };
 }
+
+export type JobStatus = "saved" | "applied" | "interviewing" | "offer" | "rejected" | "archived";
+export type WorkModel = "remote" | "hybrid" | "onsite";
+
+export interface JobOpportunity {
+  id: string;
+  title: string;
+  company: string;
+  country: string;
+  city: string | null;
+  workModel: WorkModel;
+  seniority: string;
+  language: string;
+  link: string | null;
+  originalDescription: string;
+  status: JobStatus;
+  favorite: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

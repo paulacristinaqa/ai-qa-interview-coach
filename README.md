@@ -162,7 +162,7 @@ Depois do login, a navegacao lateral organiza o MVP por dominio:
 | `/knowledge-base` | Notas, historico e exportacao | Operacional |
 | `/developer-diary` | Diario, sugestoes e exportacao | Operacional |
 | `/settings` | Sessao local e logout | Operacional |
-| `/career/jobs` | Jobs | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/jobs` | Job Intelligence Manual | Operacional |
 | `/career/applications` | Applications | Rota preparada, sem funcionalidade nesta etapa |
 | `/career/companies` | Companies | Rota preparada, sem funcionalidade nesta etapa |
 | `/career/documents` | Documents | Rota preparada, sem funcionalidade nesta etapa |
@@ -318,6 +318,22 @@ Endpoint:
 
 - `GET /api/v1/cri/current`
 
+### Job Intelligence Manual
+
+Permite cadastrar oportunidades manualmente em `/career/jobs`, sem scraping ou integracoes externas. Cada vaga registra titulo, empresa, pais, cidade, modelo de trabalho, senioridade, idioma, link, descricao original, status, favorito e observacoes.
+
+A tela oferece criacao, listagem, busca, filtros por status, modelo, senioridade e favorito, detalhe, edicao e exclusao. Todas as operacoes sao vinculadas ao usuario autenticado.
+
+Endpoints:
+
+- `GET /api/v1/job-opportunities`
+- `GET /api/v1/job-opportunities/:opportunityId`
+- `POST /api/v1/job-opportunities`
+- `PATCH /api/v1/job-opportunities/:opportunityId`
+- `DELETE /api/v1/job-opportunities/:opportunityId`
+
+Os contratos completos estao registrados em `docs/api/openapi.yaml`.
+
 ### Developer Diary
 
 Permite registrar decisoes, ADR simples, changelog, future improvements, contexto, proximos passos e exportar o diario em Markdown. Tambem sugere entradas automaticamente com base nas evidencias recentes.
@@ -351,6 +367,9 @@ Endpoints:
 17. Recalcular o CRI.
 18. Criar uma entrada no Developer Diary.
 19. Exportar Knowledge Base ou Diary em Markdown.
+20. Abrir Career Intelligence > Jobs e cadastrar uma oportunidade manual.
+21. Filtrar a oportunidade, abrir o detalhe e editar status ou observacoes.
+22. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
