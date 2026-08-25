@@ -147,6 +147,96 @@ paths:
       responses:
         "201":
           description: Diary entry created
+  /job-opportunities:
+    get:
+      summary: List manually registered job opportunities
+      description: Returns only opportunities owned by the authenticated user. No scraping or external source is called.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/JobStatus" } }
+        - { name: workModel, in: query, schema: { $ref: "#/components/schemas/WorkModel" } }
+        - { name: seniority, in: query, schema: { type: string } }
+        - { name: favorite, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Filtered opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobOpportunity"
+        "401":
+          description: Missing or invalid token
+    post:
+      summary: Create a job opportunity manually
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobOpportunity"
+      responses:
+        "201":
+          description: Opportunity created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOpportunity"
+        "400":
+          description: Invalid manual input
+        "401":
+          description: Missing or invalid token
+  /job-opportunities/{opportunityId}:
+    parameters:
+      - $ref: "#/components/parameters/OpportunityId"
+    get:
+      summary: Get a job opportunity detail
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Opportunity detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOpportunity"
+        "404":
+          description: Opportunity not found for the authenticated user
+    patch:
+      summary: Update a job opportunity manually
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJobOpportunity"
+      responses:
+        "200":
+          description: Opportunity updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobOpportunity"
+        "400":
+          description: Invalid manual input
+        "404":
+          description: Opportunity not found for the authenticated user
+    delete:
+      summary: Delete a job opportunity
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Opportunity deleted
+        "404":
+          description: Opportunity not found for the authenticated user
 components:
   securitySchemes:
     bearerAuth:
@@ -159,6 +249,13 @@ components:
       required: true
       schema:
         type: string
+    OpportunityId:
+      name: opportunityId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     LoginRequest:
       type: object
@@ -319,3 +416,53 @@ components:
           type: array
           items:
             type: object
+    JobStatus:
+      type: string
+      enum: [saved, applied, interviewing, offer, rejected, archived]
+    WorkModel:
+      type: string
+      enum: [remote, hybrid, onsite]
+    CreateJobOpportunity:
+      type: object
+      required: [title, company, country, workModel, seniority, language, originalDescription]
+      properties:
+        title: { type: string, minLength: 1 }
+        company: { type: string, minLength: 1 }
+        country: { type: string, minLength: 1 }
+        city: { type: string }
+        workModel: { $ref: "#/components/schemas/WorkModel" }
+        seniority: { type: string, minLength: 1 }
+        language: { type: string, minLength: 1 }
+        link: { type: string, format: uri }
+        originalDescription: { type: string, minLength: 1 }
+        status: { $ref: "#/components/schemas/JobStatus" }
+        favorite: { type: boolean, default: false }
+        notes: { type: string }
+    UpdateJobOpportunity:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        company: { type: string, minLength: 1 }
+        country: { type: string, minLength: 1 }
+        city: { type: string }
+        workModel: { $ref: "#/components/schemas/WorkModel" }
+        seniority: { type: string, minLength: 1 }
+        language: { type: string, minLength: 1 }
+        link: { type: string, format: uri }
+        originalDescription: { type: string, minLength: 1 }
+        status: { $ref: "#/components/schemas/JobStatus" }
+        favorite: { type: boolean }
+        notes: { type: string }
+    JobOpportunity:
+      allOf:
+        - $ref: "#/components/schemas/CreateJobOpportunity"
+        - type: object
+          required: [id, userId, status, favorite, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            userId: { type: string }
+            city: { type: [string, "null"] }
+            link: { type: [string, "null"], format: uri }
+            notes: { type: [string, "null"] }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }

@@ -23,8 +23,34 @@ model User {
   learningEvents     LearningEvent[]
   questionAttempts   QuestionAttempt[]
   technicalAttempts  TechnicalAttempt[]
+  jobOpportunities   JobOpportunity[]
 
   @@map("users")
+}
+
+model JobOpportunity {
+  id                  String   @id @default(uuid())
+  userId              String   @map("user_id")
+  title               String
+  company             String
+  country             String
+  city                String?
+  workModel           String   @map("work_model")
+  seniority           String
+  language            String
+  link                String?
+  originalDescription String   @map("original_description")
+  status              String   @default("saved")
+  favorite            Boolean  @default(false)
+  notes               String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@index([userId, workModel])
+  @@map("job_opportunities")
 }
 
 model InterviewSession {

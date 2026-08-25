@@ -16,6 +16,8 @@ import { InterviewsController } from "../interviews/interviews.controller";
 import { InterviewsService } from "../interviews/interviews.service";
 import { KnowledgeController } from "../knowledge/knowledge.controller";
 import { KnowledgeService } from "../knowledge/knowledge.service";
+import { JobsController } from "../jobs/jobs.controller";
+import { JobsService } from "../jobs/jobs.service";
 import { LearningController } from "../learning/learning.controller";
 import { LearningService } from "../learning/learning.service";
 import { TechnicalLabController } from "../technical-lab/technical-lab.controller";
@@ -61,6 +63,13 @@ describe("main API endpoints", () => {
     create: vi.fn().mockImplementation((userId, body) => ({ id: "entry-1", userId, ...body })),
     update: vi.fn()
   };
+  const jobsService = {
+    list: vi.fn().mockResolvedValue([{ id: "job-1", title: "Senior QA Engineer", company: "Example Labs", status: "saved" }]),
+    get: vi.fn().mockResolvedValue({ id: "job-1", title: "Senior QA Engineer", company: "Example Labs", status: "saved" }),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "job-1", userId, ...body, status: body.status ?? "saved" })),
+    update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
+    remove: vi.fn().mockResolvedValue(undefined)
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -72,6 +81,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, KnowledgeService], KnowledgeController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CriService], CriController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, DiaryService], DiaryController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, JobsService], JobsController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -83,7 +93,8 @@ describe("main API endpoints", () => {
         TechnicalLabController,
         KnowledgeController,
         CriController,
-        DiaryController
+        DiaryController,
+        JobsController
       ],
       providers: [
         AuthService,
@@ -94,7 +105,8 @@ describe("main API endpoints", () => {
         { provide: TechnicalLabService, useValue: technicalLabService },
         { provide: KnowledgeService, useValue: knowledgeService },
         { provide: CriService, useValue: criService },
-        { provide: DiaryService, useValue: diaryService }
+        { provide: DiaryService, useValue: diaryService },
+        { provide: JobsService, useValue: jobsService }
       ]
     }).compile();
 
@@ -190,5 +202,43 @@ describe("main API endpoints", () => {
   it("rejects protected endpoints without a bearer token", async () => {
     const response = await app.inject({ method: "GET", url: "/api/v1/cri/current" });
     expect(response.statusCode).toBe(401);
+  });
+
+  it("routes the authenticated manual Job Opportunity CRUD", async () => {
+    const payload = {
+      title: "Senior QA Engineer",
+      company: "Example Labs",
+      country: "Portugal",
+      workModel: "remote",
+      seniority: "Senior",
+      language: "English",
+      originalDescription: "Own the quality strategy."
+    };
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/job-opportunities",
+      headers: { authorization },
+      payload
+    });
+    const listed = await app.inject({
+      method: "GET",
+      url: "/api/v1/job-opportunities?status=saved&favorite=true",
+      headers: { authorization }
+    });
+    const updated = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/job-opportunities/job-1",
+      headers: { authorization },
+      payload: { status: "applied" }
+    });
+    const removed = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/job-opportunities/job-1",
+      headers: { authorization }
+    });
+
+    expect([created.statusCode, listed.statusCode, updated.statusCode, removed.statusCode]).toEqual([201, 200, 200, 204]);
+    expect(created.json()).toMatchObject({ id: "job-1", userId: "single-user" });
+    expect(jobsService.list).toHaveBeenCalledWith("single-user", expect.objectContaining({ status: "saved", favorite: true }));
   });
 });

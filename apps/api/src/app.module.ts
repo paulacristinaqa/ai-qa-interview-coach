@@ -21,6 +21,8 @@ import { InterviewsController } from "./interviews/interviews.controller";
 import { InterviewsService } from "./interviews/interviews.service";
 import { KnowledgeController } from "./knowledge/knowledge.controller";
 import { KnowledgeService } from "./knowledge/knowledge.service";
+import { JobsController } from "./jobs/jobs.controller";
+import { JobsService } from "./jobs/jobs.service";
 import { LearningController } from "./learning/learning.controller";
 import { LearningService } from "./learning/learning.service";
 import { QuestionsController } from "./questions/questions.controller";
@@ -41,7 +43,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     TechnicalLabController,
     KnowledgeController,
     CriController,
-    DiaryController
+    DiaryController,
+    JobsController
   ],
   providers: [
     PrismaService,
@@ -59,7 +62,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     TechnicalLabService,
     KnowledgeService,
     CriService,
-    DiaryService
+    DiaryService,
+    JobsService
   ]
 })
 export class AppModule {}
