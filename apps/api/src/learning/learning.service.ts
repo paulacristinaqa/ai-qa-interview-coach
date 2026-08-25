@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { AiGateway } from "../ai/ai-gateway.service";
-import { createAiRequest } from "../ai/ai-requests";
+import { createPromptRequest } from "../ai/prompts/prompt-template.registry";
 import { PrismaService } from "../database/prisma.service";
 
 type HelpLevel = "hint" | "explanation" | "example" | "model-answer";
@@ -22,7 +22,7 @@ export class LearningService {
       ? this.ai
         ? (
             await this.ai.generate<{ explanation: string; nextPrompt: string }>(
-              createAiRequest("guided-learning.explanation", {
+              createPromptRequest("guided-learning.explanation", {
                 language,
                 userInput: body.concept,
                 context: { concept: body.concept, helpLevel }

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAiRequest } from "./ai-requests";
+import { createPromptRequest } from "./prompts/prompt-template.registry";
 import { OllamaAiProvider, OllamaProviderError } from "./ollama-ai.provider";
 
-const request = createAiRequest("interview.opening", {
+const request = createPromptRequest("interview.opening", {
   language: "en",
   userInput: "API Testing",
   context: { role: "QA Engineer" }

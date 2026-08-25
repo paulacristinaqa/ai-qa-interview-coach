@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { AiGateway } from "../ai/ai-gateway.service";
-import { createAiRequest } from "../ai/ai-requests";
+import { createPromptRequest } from "../ai/prompts/prompt-template.registry";
 import { PrismaService } from "../database/prisma.service";
 
 const baseDimensions = ["Clareza", "Profundidade tecnica", "Estrutura", "Comunicacao"];
@@ -37,7 +37,7 @@ export class FeedbackService {
     };
     const generated = this.ai
       ? await this.ai.generate<FeedbackOutput>(
-          createAiRequest("interview.feedback", {
+          createPromptRequest("interview.feedback", {
             language: session.language === "en" ? "en" : "pt-BR",
             userInput: JSON.stringify(answers),
             context: { answerCount: answers.length, dimensions }

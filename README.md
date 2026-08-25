@@ -253,6 +253,22 @@ AI_PROVIDER=mock
 
 O uso local nao tem cobranca por requisicao, mas consome recursos do computador, energia e espaco em disco. O projeto nao depende de OpenAI API nem de outro servico de IA pago.
 
+### Prompt Templates versionados
+
+Todos os pedidos enviados ao AI Gateway sao criados por um registry central em `apps/api/src/ai/prompts`. Os templates estao separados por dominio:
+
+- Interview;
+- Guided Learning;
+- Grill Me;
+- Technical Lab;
+- Career.
+
+Cada template declara identificador, versao semantica, objetivo, entradas esperadas, formato de saida, schema JSON, criterios de avaliacao e regras de seguranca. A versao enviada ao provider usa o formato `dominio.template@major.minor.patch`, por exemplo `interview.feedback@1.0.0`.
+
+Mudancas que possam alterar o comportamento ou o formato da resposta devem criar uma nova versao do template. O provider local recebe o schema junto com o prompt e a API valida novamente o JSON retornado. JSON malformado ou incompativel com o schema nunca e persistido: o gateway retorna ao resultado deterministico.
+
+Os templates de Technical Lab e Career preparam contratos para entregas futuras; sua existencia no registry nao habilita novas funcionalidades nem altera as regras atuais desses modulos.
+
 ### Banco de Perguntas Nivelado
 
 Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho. O seed inicial gera 708 perguntas: 118 por tema, com criterios de boa resposta, dicas progressivas e resposta modelo.
