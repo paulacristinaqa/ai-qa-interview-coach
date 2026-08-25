@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "crypto";
+import { AiGateway } from "../ai/ai-gateway.service";
+import { createAiRequest } from "../ai/ai-requests";
 import { PrismaService } from "../database/prisma.service";
 import {
   InterviewLanguage,
@@ -12,9 +14,16 @@ import {
 export class InterviewsService {
   private readonly sessions = new Map<string, InterviewSession>();
 
-  constructor(private readonly prisma?: PrismaService) {}
+  constructor(private readonly prisma?: PrismaService, private readonly ai?: AiGateway) {}
 
   async start(request: StartInterviewRequest, userId = "single-user"): Promise<InterviewSession> {
+    const fallbackQuestion = this.buildOpeningQuestion(request.language, request.topic, request.targetRole, request.seniority);
+    const openingQuestion = await this.generateQuestion("interview.opening", request.language, fallbackQuestion, {
+      targetRole: request.targetRole,
+      seniority: request.seniority,
+      topic: request.topic,
+      difficulty: request.difficulty
+    });
     if (this.prisma) {
       const created = await this.prisma.interviewSession.create({
         data: {
@@ -28,7 +37,7 @@ export class InterviewsService {
           turns: {
             create: {
               orderIndex: 1,
-              question: this.buildOpeningQuestion(request.language, request.topic, request.targetRole, request.seniority)
+              question: openingQuestion
             }
           }
         },
@@ -49,7 +58,7 @@ export class InterviewsService {
       turns: [
         {
           orderIndex: 1,
-          question: this.buildOpeningQuestion(request.language, request.topic, request.targetRole, request.seniority)
+          question: openingQuestion
         }
       ],
       createdAt: new Date().toISOString()
@@ -81,16 +90,23 @@ export class InterviewsService {
       }
 
       if (session.turns.length < 4) {
+        const fallbackQuestion = this.buildFollowUpQuestion(
+          session.language as InterviewLanguage,
+          session.topic,
+          request.answer,
+          session.turns.length + 1
+        );
+        const followUpQuestion = await this.generateQuestion(
+          "interview.follow-up",
+          session.language as InterviewLanguage,
+          fallbackQuestion,
+          { topic: session.topic, answer: request.answer, orderIndex: session.turns.length + 1 }
+        );
         await this.prisma.interviewTurn.create({
           data: {
             sessionId,
             orderIndex: session.turns.length + 1,
-            question: this.buildFollowUpQuestion(
-              session.language as InterviewLanguage,
-              session.topic,
-              request.answer,
-              session.turns.length + 1
-            )
+            question: followUpQuestion
           }
         });
       }
@@ -106,9 +122,19 @@ export class InterviewsService {
     }
 
     if (session.turns.length < 4) {
+      const fallbackQuestion = this.buildFollowUpQuestion(
+        session.language,
+        session.topic,
+        request.answer,
+        session.turns.length + 1
+      );
       session.turns.push({
         orderIndex: session.turns.length + 1,
-        question: this.buildFollowUpQuestion(session.language, session.topic, request.answer, session.turns.length + 1)
+        question: await this.generateQuestion("interview.follow-up", session.language, fallbackQuestion, {
+          topic: session.topic,
+          answer: request.answer,
+          orderIndex: session.turns.length + 1
+        })
       });
     }
 
@@ -192,6 +218,20 @@ export class InterviewsService {
     }
 
     return `Voce esta em uma entrevista para ${targetRole} ${seniority}. Explique como abordaria ${topic}, usando um exemplo concreto de QA.`;
+  }
+
+  private async generateQuestion(
+    templateId: "interview.opening" | "interview.follow-up",
+    language: InterviewLanguage,
+    fallbackQuestion: string,
+    context: Record<string, unknown>
+  ) {
+    if (!this.ai) return fallbackQuestion;
+    const generated = await this.ai.generate<{ question: string }>(
+      createAiRequest(templateId, { language, userInput: JSON.stringify(context), context }),
+      { question: fallbackQuestion }
+    );
+    return generated.output.question;
   }
 
   private buildFollowUpQuestion(language: InterviewLanguage, topic: string, answer: string, orderIndex: number): string {

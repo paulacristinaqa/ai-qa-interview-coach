@@ -50,6 +50,8 @@ As credenciais locais padrao sao:
 - Email: `paula@example.com`
 - Senha: `change-me-locally`
 
+Por padrao, `AI_PROVIDER=mock`: o projeto funciona sem conta, chave de API ou servico pago. A IA generativa local com Ollama e opcional e esta descrita na secao "IA local com custo zero".
+
 ### 2. Instalar dependencias
 
 No Windows, prefira `npm.cmd` para evitar bloqueio de politica de execucao do PowerShell:
@@ -214,6 +216,43 @@ Endpoint:
 
 - `POST /api/v1/feedback/sessions/:sessionId`
 
+### IA local com custo zero
+
+O MVP usa respostas deterministicas com `AI_PROVIDER=mock` por padrao. Esse modo e suficiente para desenvolver, testar e executar todo o fluxo sem custo de API.
+
+Para obter respostas generativas sem enviar entrevistas ou dados de carreira para um provedor externo, instale o [Ollama para Windows](https://docs.ollama.com/windows) e baixe o modelo compacto recomendado:
+
+```powershell
+ollama pull qwen3:4b
+```
+
+O modelo ocupa aproximadamente 2,5 GB em disco. A configuracao foi escolhida para uma maquina com 32 GB de memoria e sem GPU dedicada confirmada. Depois do download, altere apenas estas variaveis no `.env`:
+
+```text
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3:4b
+OLLAMA_TIMEOUT_MS=45000
+OLLAMA_KEEP_ALIVE=5m
+```
+
+Reinicie a API. O Ollama atende localmente em `http://127.0.0.1:11434` e nao requer chave para uso local. A integracao cobre:
+
+- perguntas iniciais e follow-ups de Interview;
+- feedback estruturado das respostas;
+- explicacoes do Guided Learning;
+- perguntas iniciais e follow-ups do Grill Me.
+
+As respostas passam por validacao de schema JSON. Se o Ollama nao estiver ativo, exceder o timeout ou retornar uma resposta invalida, o gateway registra apenas metadados tecnicos e usa automaticamente a resposta deterministica. Perguntas, respostas e outros dados informados pela usuaria nao sao escritos nos logs da IA.
+
+Para voltar ao modo sem modelo:
+
+```text
+AI_PROVIDER=mock
+```
+
+O uso local nao tem cobranca por requisicao, mas consome recursos do computador, energia e espaco em disco. O projeto nao depende de OpenAI API nem de outro servico de IA pago.
+
 ### Banco de Perguntas Nivelado
 
 Fornece perguntas de entrevista por tema, nivel, idioma e competencia. O MVP seleciona a proxima pergunta de forma deterministica com base no historico de desempenho. O seed inicial gera 708 perguntas: 118 por tema, com criterios de boa resposta, dicas progressivas e resposta modelo.
@@ -371,3 +410,13 @@ Confirme se a API esta em `http://localhost:3001/api/v1` e se o `.env` contem:
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:3001/api/v1
 ```
+
+### Ollama nao responde ou a geracao demora
+
+Confirme se o Ollama esta aberto e se o modelo foi baixado:
+
+```powershell
+ollama list
+```
+
+A primeira resposta pode demorar mais porque o modelo precisa ser carregado na memoria. Enquanto o servico estiver indisponivel, a API continua operacional com fallback deterministico. Use `AI_PROVIDER=mock` para desativar tentativas de geracao local.

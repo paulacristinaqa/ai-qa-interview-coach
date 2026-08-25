@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+import { AiGateway } from "../ai/ai-gateway.service";
 import { PrismaService } from "../database/prisma.service";
 import { LearningService } from "./learning.service";
 
-function setup(priorLevels: string[]) {
+function setup(priorLevels: string[], ai?: AiGateway) {
   const create = vi.fn().mockImplementation(({ data }) => Promise.resolve({ id: "event-1", ...data }));
   const prisma = {
     learningEvent: {
@@ -10,7 +11,7 @@ function setup(priorLevels: string[]) {
       create
     }
   } as unknown as PrismaService;
-  return { service: new LearningService(prisma), create };
+  return { service: new LearningService(prisma, ai), create };
 }
 
 describe("LearningService", () => {
@@ -36,5 +37,17 @@ describe("LearningService", () => {
     const result = await service.hint("user-1", { concept: "Test Design", helpLevel: "unexpected" });
 
     expect(result.helpLevel).toBe("hint");
+  });
+
+  it("uses a generated explanation without bypassing the help level", async () => {
+    const ai = {
+      generate: vi.fn().mockResolvedValue({ output: { explanation: "Local explanation", nextPrompt: "Try it now" } })
+    } as unknown as AiGateway;
+    const { service } = setup([], ai);
+
+    const result = await service.hint("user-1", { concept: "SQL", helpLevel: "explanation", language: "en" });
+
+    expect(result.content).toEqual({ explanation: "Local explanation", nextPrompt: "Try it now" });
+    expect(ai.generate).toHaveBeenCalledOnce();
   });
 });

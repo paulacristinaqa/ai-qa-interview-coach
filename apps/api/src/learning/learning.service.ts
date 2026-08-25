@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import { AiGateway } from "../ai/ai-gateway.service";
+import { createAiRequest } from "../ai/ai-requests";
 import { PrismaService } from "../database/prisma.service";
 
 type HelpLevel = "hint" | "explanation" | "example" | "model-answer";
 
 @Injectable()
 export class LearningService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai?: AiGateway) {}
 
   async hint(userId: string, body: { concept: string; helpLevel?: string; sessionId?: string; language?: string }) {
     const helpLevel = resolveHelpLevel(body.helpLevel);
@@ -14,8 +16,21 @@ export class LearningService {
       orderBy: { createdAt: "asc" }
     });
     const allowed = helpLevel !== "model-answer" || hasProgressiveSupport(priorEvents.map((event) => event.helpLevel));
+    const language = body.language === "en" ? "en" : "pt-BR";
+    const fallbackContent = buildLearningContent(body.concept, helpLevel, language);
     const content = allowed
-      ? buildLearningContent(body.concept, helpLevel, body.language ?? "pt-BR")
+      ? this.ai
+        ? (
+            await this.ai.generate<{ explanation: string; nextPrompt: string }>(
+              createAiRequest("guided-learning.explanation", {
+                language,
+                userInput: body.concept,
+                context: { concept: body.concept, helpLevel }
+              }),
+              fallbackContent
+            )
+          ).output
+        : fallbackContent
       : {
           blocked: true,
           explanation:
@@ -30,7 +45,7 @@ export class LearningService {
         concept: body.concept,
         helpLevel,
         retryRequested: true,
-        language: body.language ?? "pt-BR",
+        language,
         content
       }
     });
