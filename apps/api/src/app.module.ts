@@ -1,4 +1,7 @@
 import { Module } from "@nestjs/common";
+import { AiGateway } from "./ai/ai-gateway.service";
+import { MockAiProvider } from "./ai/mock-ai.provider";
+import { OllamaAiProvider } from "./ai/ollama-ai.provider";
 import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { CriController } from "./cri/cri.controller";
@@ -43,6 +46,9 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
   providers: [
     PrismaService,
     DatabaseBootstrap,
+    MockAiProvider,
+    { provide: OllamaAiProvider, useFactory: () => new OllamaAiProvider() },
+    AiGateway,
     AuthService,
     DashboardService,
     InterviewsService,

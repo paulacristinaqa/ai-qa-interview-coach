@@ -1,6 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { PrismaService } from "../database/prisma.service";
+import { AiGateway } from "../ai/ai-gateway.service";
 import { InterviewsService } from "./interviews.service";
 
 describe("InterviewsService", () => {
@@ -33,6 +34,24 @@ describe("InterviewsService", () => {
 
     expect(updated.turns[0].answer).toContain("validaria");
     expect(updated.turns[1].question).toContain("SQL");
+  });
+
+  it("uses an AI-generated question when a provider response is available", async () => {
+    const ai = {
+      generate: vi.fn().mockResolvedValue({ output: { question: "AI-generated API testing question" } })
+    } as unknown as AiGateway;
+    const service = new InterviewsService(undefined, ai);
+
+    const session = await service.start({
+      language: "en",
+      targetRole: "QA Engineer",
+      seniority: "Senior",
+      topic: "API Testing",
+      difficulty: "advanced"
+    });
+
+    expect(session.turns[0].question).toBe("AI-generated API testing question");
+    expect(ai.generate).toHaveBeenCalledOnce();
   });
 
   it("persists a completed session through Prisma", async () => {

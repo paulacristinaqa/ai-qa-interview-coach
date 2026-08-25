@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { AiGateway } from "../ai/ai-gateway.service";
 import { PrismaService } from "../database/prisma.service";
 import { QuestionsService } from "../questions/questions.service";
 import { GrillMeService } from "./grill-me.service";
@@ -50,5 +51,24 @@ describe("GrillMeService", () => {
 
     expect(result.attempt).toMatchObject({ id: "attempt-1" });
     expect(prisma.interviewTurn.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ orderIndex: 2 }) }));
+  });
+
+  it("uses a locally generated opening question", async () => {
+    const create = vi.fn().mockImplementation(({ data }) => Promise.resolve({
+      id: "session-ai", language: data.language, targetRole: data.targetRole, seniority: data.seniority,
+      topic: data.topic, difficulty: data.difficulty, interviewerStyle: data.interviewerStyle,
+      status: "started", startedAt: new Date("2026-07-13T10:00:00Z"),
+      turns: [{ orderIndex: 1, question: data.turns.create.question, answer: null, coachNote: null }]
+    }));
+    const prisma = { interviewSession: { create } } as unknown as PrismaService;
+    const questions = { next: vi.fn().mockResolvedValue({ id: "q-1", prompt: "Source question" }) } as unknown as QuestionsService;
+    const ai = { generate: vi.fn().mockResolvedValue({ output: { question: "Local Ollama Grill Me question" } }) } as unknown as AiGateway;
+
+    const result = await new GrillMeService(prisma, questions, ai).start("user-1", {
+      topic: "API Testing", language: "en", level: "advanced", mode: "realistic"
+    });
+
+    expect(result.session.turns[0].question).toBe("Local Ollama Grill Me question");
+    expect(ai.generate).toHaveBeenCalledOnce();
   });
 });

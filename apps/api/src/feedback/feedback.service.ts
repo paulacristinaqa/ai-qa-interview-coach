@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { AiGateway } from "../ai/ai-gateway.service";
+import { createAiRequest } from "../ai/ai-requests";
 import { PrismaService } from "../database/prisma.service";
 
 const baseDimensions = ["Clareza", "Profundidade tecnica", "Estrutura", "Comunicacao"];
 
 @Injectable()
 export class FeedbackService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly ai?: AiGateway) {}
 
   async generate(sessionId: string) {
     const session = await this.prisma.interviewSession.findUnique({
@@ -20,23 +22,43 @@ export class FeedbackService {
     const averageLength = answers.length ? answers.join(" ").length / answers.length : 0;
     const baseScore = Math.max(35, Math.min(88, Math.round(averageLength / 8 + answers.length * 12)));
     const dimensions = session.language === "en" ? [...baseDimensions, "Naturalidade em ingles", "Vocabulario tecnico"] : baseDimensions;
+    const fallbackOutput: FeedbackOutput = {
+      overallSummary:
+        answers.length === 0
+          ? "Ainda nao ha respostas suficientes para um feedback confiavel."
+          : buildOverallSummary(session.language, answers.length),
+      confidenceLevel: answers.length >= 3 ? "medium" : "low",
+      dimensions: dimensions.map((dimension, index) => ({
+        dimension,
+        score: Math.max(30, Math.min(95, baseScore - index * 4)),
+        evidence: answers[index % Math.max(answers.length, 1)] || "Sem resposta registrada para esta dimensao.",
+        recommendation: buildRecommendation(session.language, dimension)
+      }))
+    };
+    const generated = this.ai
+      ? await this.ai.generate<FeedbackOutput>(
+          createAiRequest("interview.feedback", {
+            language: session.language === "en" ? "en" : "pt-BR",
+            userInput: JSON.stringify(answers),
+            context: { answerCount: answers.length, dimensions }
+          }),
+          fallbackOutput
+        )
+      : {
+          output: fallbackOutput,
+          modelName: "deterministic-mvp-evaluator",
+          promptTemplateVersion: "interview-feedback-v1"
+        };
+    const output = generated.output;
     const created = await this.prisma.feedbackReport.create({
       data: {
         sessionId,
-        overallSummary:
-          answers.length === 0
-            ? "Ainda nao ha respostas suficientes para um feedback confiavel."
-            : buildOverallSummary(session.language, answers.length),
-        confidenceLevel: answers.length >= 3 ? "medium" : "low",
-        modelName: process.env.AI_PROVIDER === "openai" ? "openai-configured-provider" : "deterministic-mvp-evaluator",
-        promptTemplateVersion: "mvp-feedback-v2",
+        overallSummary: output.overallSummary,
+        confidenceLevel: output.confidenceLevel,
+        modelName: generated.modelName,
+        promptTemplateVersion: generated.promptTemplateVersion,
         dimensions: {
-          create: dimensions.map((dimension, index) => ({
-            dimension,
-            score: Math.max(30, Math.min(95, baseScore - index * 4)),
-            evidence: answers[index % Math.max(answers.length, 1)] || "Sem resposta registrada para esta dimensao.",
-            recommendation: buildRecommendation(session.language, dimension)
-          }))
+          create: output.dimensions
         }
       },
       include: { dimensions: true }
@@ -44,6 +66,12 @@ export class FeedbackService {
 
     return created;
   }
+}
+
+interface FeedbackOutput {
+  overallSummary: string;
+  confidenceLevel: "low" | "medium" | "high";
+  dimensions: Array<{ dimension: string; score: number; evidence: string; recommendation: string }>;
 }
 
 function buildOverallSummary(language: string, answerCount: number) {

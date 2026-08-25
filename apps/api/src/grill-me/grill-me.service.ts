@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { AiGateway } from "../ai/ai-gateway.service";
+import { createAiRequest } from "../ai/ai-requests";
 import { PrismaService } from "../database/prisma.service";
 import { QuestionsService } from "../questions/questions.service";
 import {
@@ -19,7 +21,8 @@ const maxTurnsByMode: Record<GrillMeMode, number> = {
 export class GrillMeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly questionsService: QuestionsService
+    private readonly questionsService: QuestionsService,
+    private readonly ai?: AiGateway
   ) {}
 
   async start(userId: string, request: StartGrillMeRequest) {
@@ -28,6 +31,15 @@ export class GrillMeService {
     if (!question) {
       throw new NotFoundException("No grill-me question found for the selected filters");
     }
+    const fallbackQuestion = buildOpeningPrompt(request.language, request.mode, question.prompt);
+    const openingQuestion = await this.generateQuestion(
+      request.language,
+      request.mode,
+      request.topic,
+      question.prompt,
+      fallbackQuestion,
+      1
+    );
 
     const session = await this.prisma.interviewSession.create({
       data: {
@@ -41,7 +53,7 @@ export class GrillMeService {
         turns: {
           create: {
             orderIndex: 1,
-            question: buildOpeningPrompt(request.language, request.mode, question.prompt)
+            question: openingQuestion
           }
         }
       },
@@ -89,11 +101,21 @@ export class GrillMeService {
     }
 
     if (session.turns.length < maxTurnsByMode[mode]) {
+      const nextOrderIndex = session.turns.length + 1;
+      const fallbackQuestion = buildFollowUp(language, mode, session.topic, request.answer, nextOrderIndex);
+      const followUpQuestion = await this.generateQuestion(
+        language,
+        mode,
+        session.topic,
+        request.answer,
+        fallbackQuestion,
+        nextOrderIndex
+      );
       await this.prisma.interviewTurn.create({
         data: {
           sessionId,
-          orderIndex: session.turns.length + 1,
-          question: buildFollowUp(language, mode, session.topic, request.answer, session.turns.length + 1)
+          orderIndex: nextOrderIndex,
+          question: followUpQuestion
         }
       });
     } else {
@@ -108,6 +130,26 @@ export class GrillMeService {
       include: { turns: { orderBy: { orderIndex: "asc" } } }
     });
     return { mode, attempt, session: toGrillSession(updated) };
+  }
+
+  private async generateQuestion(
+    language: GrillMeLanguage,
+    mode: GrillMeMode,
+    topic: string,
+    userInput: string,
+    fallbackQuestion: string,
+    orderIndex: number
+  ) {
+    if (!this.ai) return fallbackQuestion;
+    const generated = await this.ai.generate<{ question: string }>(
+      createAiRequest("grill-me.question", {
+        language,
+        userInput,
+        context: { topic, mode, orderIndex }
+      }),
+      { question: fallbackQuestion }
+    );
+    return generated.output.question;
   }
 }
 

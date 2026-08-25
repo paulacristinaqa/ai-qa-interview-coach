@@ -6,7 +6,7 @@ const startupTimeoutMs = Number(process.env.E2E_STARTUP_TIMEOUT_MS ?? 60_000);
 await runCommand(process.execPath, ["scripts/wait-for-postgres.mjs"], "PostgreSQL readiness check");
 const api = spawn(process.execPath, ["apps/api/dist/main.js"], {
   cwd: process.cwd(),
-  env: process.env,
+  env: { ...process.env, AI_PROVIDER: "mock" },
   stdio: "inherit"
 });
 
