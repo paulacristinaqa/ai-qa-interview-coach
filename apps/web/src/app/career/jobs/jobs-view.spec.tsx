@@ -38,6 +38,7 @@ describe("Job Intelligence frontend", () => {
     expect(markup).toContain("Em entrevistas");
     expect(markup).toContain("Descricao original");
     expect(markup).toContain("Abrir anuncio original");
+    expect(markup).toContain('/grill-me?opportunityId=job-1');
   });
 
   it("builds only active list filters", () => {

@@ -26,30 +26,33 @@ export class GrillMeService {
   ) {}
 
   async start(userId: string, request: StartGrillMeRequest) {
+    const vacancy = await this.loadVacancy(userId, request.opportunityId);
+    const vacancyContext = vacancy ? toVacancyContext(vacancy) : undefined;
     const level = toNumericLevel(request.level);
     const question = await this.questionsService.next(userId, request.topic, request.language, level);
     if (!question) {
       throw new NotFoundException("No grill-me question found for the selected filters");
     }
-    const fallbackQuestion = buildOpeningPrompt(request.language, request.mode, question.prompt);
+    const fallbackQuestion = buildOpeningPrompt(request.language, request.mode, question.prompt, vacancyContext);
     const openingQuestion = await this.generateQuestion(
       request.language,
       request.mode,
       request.topic,
       question.prompt,
       fallbackQuestion,
-      1
+      1,
+      vacancyContext
     );
 
     const session = await this.prisma.interviewSession.create({
       data: {
         userId,
         language: request.language,
-        targetRole: request.targetRole ?? "QA Engineer",
+        targetRole: vacancy?.title ?? request.targetRole ?? "QA Engineer",
         seniority: request.level,
         topic: request.topic,
         difficulty: request.level,
-        interviewerStyle: `grill-me:${request.mode}`,
+        interviewerStyle: buildInterviewerStyle(request.mode, vacancy?.id),
         turns: {
           create: {
             orderIndex: 1,
@@ -64,20 +67,27 @@ export class GrillMeService {
       mode: request.mode,
       level: request.level,
       sourceQuestion: question,
+      jobContext: vacancy ? { id: vacancy.id, title: vacancy.title, company: vacancy.company } : undefined,
       session: toGrillSession(session)
     };
   }
 
   async answer(userId: string, sessionId: string, request: SubmitGrillMeAnswerRequest) {
-    const session = await this.prisma.interviewSession.findUnique({
-      where: { id: sessionId },
+    const session = await this.prisma.interviewSession.findFirst({
+      where: { id: sessionId, userId },
       include: { turns: { orderBy: { orderIndex: "asc" } } }
     });
     if (!session) {
       throw new NotFoundException("Grill Me session not found");
     }
+    if (!session.interviewerStyle?.startsWith("grill-me:")) {
+      throw new NotFoundException("Grill Me session not found");
+    }
 
     const mode = resolveMode(session.interviewerStyle);
+    const opportunityId = resolveOpportunityId(session.interviewerStyle);
+    const vacancy = await this.loadVacancy(userId, opportunityId);
+    const vacancyContext = vacancy ? toVacancyContext(vacancy) : undefined;
     const language = session.language as GrillMeLanguage;
     const currentTurn = session.turns.at(-1);
     const question = await this.prisma.question.findFirst({
@@ -102,14 +112,15 @@ export class GrillMeService {
 
     if (session.turns.length < maxTurnsByMode[mode]) {
       const nextOrderIndex = session.turns.length + 1;
-      const fallbackQuestion = buildFollowUp(language, mode, session.topic, request.answer, nextOrderIndex);
+      const fallbackQuestion = buildFollowUp(language, mode, session.topic, request.answer, nextOrderIndex, vacancyContext);
       const followUpQuestion = await this.generateQuestion(
         language,
         mode,
         session.topic,
         request.answer,
         fallbackQuestion,
-        nextOrderIndex
+        nextOrderIndex,
+        vacancyContext
       );
       await this.prisma.interviewTurn.create({
         data: {
@@ -129,7 +140,22 @@ export class GrillMeService {
       where: { id: sessionId },
       include: { turns: { orderBy: { orderIndex: "asc" } } }
     });
-    return { mode, attempt, session: toGrillSession(updated) };
+    return {
+      mode,
+      attempt,
+      jobContext: vacancy ? { id: vacancy.id, title: vacancy.title, company: vacancy.company } : undefined,
+      session: toGrillSession(updated)
+    };
+  }
+
+  private async loadVacancy(userId: string, opportunityId?: string) {
+    if (!opportunityId) return null;
+    const vacancy = await this.prisma.jobOpportunity.findFirst({
+      where: { id: opportunityId, userId },
+      include: { analysis: true }
+    });
+    if (!vacancy) throw new NotFoundException("Job opportunity not found");
+    return vacancy;
   }
 
   private async generateQuestion(
@@ -138,14 +164,15 @@ export class GrillMeService {
     topic: string,
     userInput: string,
     fallbackQuestion: string,
-    orderIndex: number
+    orderIndex: number,
+    vacancyContext?: VacancyContext
   ) {
     if (!this.ai) return fallbackQuestion;
     const generated = await this.ai.generate<{ question: string }>(
       createPromptRequest("grill-me.question", {
         language,
         userInput,
-        context: { topic, mode, orderIndex }
+        context: { topic, mode, orderIndex, vacancy: vacancyContext }
       }),
       { question: fallbackQuestion }
     );
@@ -160,15 +187,31 @@ function toNumericLevel(level: GrillMeLevel | string) {
 }
 
 function resolveMode(value: string | null): GrillMeMode {
-  const mode = value?.replace("grill-me:", "");
+  const mode = value?.split(":")[1];
   return mode === "light-pressure" || mode === "realistic" ? mode : "standard";
 }
 
-function buildOpeningPrompt(language: GrillMeLanguage, mode: GrillMeMode, prompt: string) {
+function resolveOpportunityId(value: string | null) {
+  const marker = ":job:";
+  const markerIndex = value?.indexOf(marker) ?? -1;
+  return markerIndex >= 0 ? value?.slice(markerIndex + marker.length) : undefined;
+}
+
+function buildInterviewerStyle(mode: GrillMeMode, opportunityId?: string) {
+  return opportunityId ? `grill-me:${mode}:job:${opportunityId}` : `grill-me:${mode}`;
+}
+
+function buildOpeningPrompt(language: GrillMeLanguage, mode: GrillMeMode, prompt: string, vacancy?: VacancyContext) {
+  const vacancyFocus = vacancy?.requirements[0] ?? vacancy?.technologies[0];
+  const vacancyPrefix = vacancy
+    ? language === "en"
+      ? `For the ${vacancy.title} role at ${vacancy.company}, use the vacancy requirements as context.${vacancyFocus ? ` Focus especially on ${vacancyFocus}.` : ""} `
+      : `Para a vaga de ${vacancy.title} na ${vacancy.company}, use os requisitos da vaga como contexto.${vacancyFocus ? ` Priorize ${vacancyFocus}.` : ""} `
+    : "";
   if (language === "en") {
-    return mode === "standard" ? prompt : `${prompt} Answer as if this were a live interview. I will challenge vague points.`;
+    return vacancyPrefix + (mode === "standard" ? prompt : `${prompt} Answer as if this were a live interview. I will challenge vague points.`);
   }
-  return mode === "standard" ? prompt : `${prompt} Responda como em uma entrevista ao vivo. Vou pressionar pontos vagos.`;
+  return vacancyPrefix + (mode === "standard" ? prompt : `${prompt} Responda como em uma entrevista ao vivo. Vou pressionar pontos vagos.`);
 }
 
 function buildCoachNote(language: GrillMeLanguage, mode: GrillMeMode, answer: string) {
@@ -186,37 +229,82 @@ function buildCoachNote(language: GrillMeLanguage, mode: GrillMeMode, answer: st
   return "Bom. Mantenha estrutura: contexto, acao, evidencia, trade-off e resultado.";
 }
 
-function buildFollowUp(language: GrillMeLanguage, mode: GrillMeMode, topic: string, answer: string, orderIndex: number) {
+function buildFollowUp(
+  language: GrillMeLanguage,
+  mode: GrillMeMode,
+  topic: string,
+  answer: string,
+  orderIndex: number,
+  vacancy?: VacancyContext
+) {
   const vague = answer.length < 140;
+  const vacancyFocus = vacancy?.requirements[0] ?? vacancy?.technologies[0] ?? topic;
   if (language === "en") {
     if (mode === "realistic") {
       return vague
-        ? `I need a sharper answer. Give me one real ${topic} example, the risk, and how you proved quality.`
-        : "Now defend your approach: what could fail, and how would you explain the trade-off to a product manager?";
+        ? `I need a sharper answer. For this role, give me one real ${vacancyFocus} example, the risk, and how you proved quality.`
+        : `Now defend your approach for this role: what could fail around ${vacancyFocus}, and how would you explain the trade-off to a product manager?`;
     }
     if (mode === "light-pressure") {
       return vague
-        ? `Be more specific. What evidence would convince you that your ${topic} approach worked?`
-        : "Good. What edge case or stakeholder concern would you add?";
+        ? `Be more specific. What evidence would convince you that your ${vacancyFocus} approach worked?`
+        : `Good. What edge case or stakeholder concern around ${vacancyFocus} would you add?`;
     }
     return orderIndex % 2 === 0
-      ? `Can you add a concrete example related to ${topic}?`
-      : `What risk or trade-off would you mention for ${topic}?`;
+      ? `Can you add a concrete example related to ${vacancyFocus}?`
+      : `What risk or trade-off would you mention for ${vacancyFocus}?`;
   }
 
   if (mode === "realistic") {
     return vague
-      ? `Preciso de uma resposta mais forte. Traga um exemplo real de ${topic}, o risco e como voce provaria qualidade.`
-      : "Agora defenda sua abordagem: o que poderia falhar e como explicaria o trade-off para produto?";
+      ? `Preciso de uma resposta mais forte. Para esta vaga, traga um exemplo real de ${vacancyFocus}, o risco e como voce provaria qualidade.`
+      : `Agora defenda sua abordagem para esta vaga: o que poderia falhar em ${vacancyFocus} e como explicaria o trade-off para produto?`;
   }
   if (mode === "light-pressure") {
     return vague
-      ? `Seja mais especifica. Que evidencia provaria que sua abordagem em ${topic} funcionou?`
-      : "Bom. Que cenario de borda ou preocupacao de stakeholder voce adicionaria?";
+      ? `Seja mais especifica. Que evidencia provaria que sua abordagem em ${vacancyFocus} funcionou?`
+      : `Bom. Que cenario de borda ou preocupacao de stakeholder sobre ${vacancyFocus} voce adicionaria?`;
   }
   return orderIndex % 2 === 0
-    ? `Voce pode adicionar um exemplo concreto sobre ${topic}?`
-    : `Que risco ou trade-off voce citaria para ${topic}?`;
+    ? `Voce pode adicionar um exemplo concreto sobre ${vacancyFocus}?`
+    : `Que risco ou trade-off voce citaria para ${vacancyFocus}?`;
+}
+
+interface VacancyContext {
+  title: string;
+  company: string;
+  seniority: string;
+  summary: string;
+  requirements: string[];
+  technologies: string[];
+  gaps: string[];
+}
+
+function toVacancyContext(vacancy: {
+  title: string;
+  company: string;
+  seniority: string;
+  originalDescription: string;
+  analysis: null | {
+    technicalSummary: string;
+    requiredRequirements: unknown;
+    technologies: unknown;
+    gaps: unknown;
+  };
+}): VacancyContext {
+  return {
+    title: vacancy.title,
+    company: vacancy.company,
+    seniority: vacancy.seniority,
+    summary: vacancy.analysis?.technicalSummary ?? vacancy.originalDescription.slice(0, 1200),
+    requirements: stringArray(vacancy.analysis?.requiredRequirements),
+    technologies: stringArray(vacancy.analysis?.technologies),
+    gaps: stringArray(vacancy.analysis?.gaps)
+  };
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string").slice(0, 12) : [];
 }
 
 function toGrillSession(session: {

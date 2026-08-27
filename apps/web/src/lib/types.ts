@@ -64,6 +64,7 @@ export interface GrillMeResponse {
   level?: GrillLevel;
   sourceQuestion?: Question;
   attempt?: JsonRecord | null;
+  jobContext?: { id: string; title: string; company: string };
   session: InterviewSession;
 }
 

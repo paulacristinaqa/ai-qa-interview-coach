@@ -5,9 +5,9 @@ export const grillMePromptTemplates: PromptTemplate[] = [{
   id: "grill-me.question",
   domain: "grill-me",
   task: "grill-me-question",
-  version: "1.0.0",
-  objective: "Generate one technical Grill Me question at the configured pressure level.",
-  expectedInputs: ["language", "topic", "mode", "orderIndex", "sourceQuestionOrAnswer"],
+  version: "1.1.0",
+  objective: "Generate one technical Grill Me question at the configured pressure level, optionally grounded in a supplied vacancy.",
+  expectedInputs: ["language", "topic", "mode", "orderIndex", "sourceQuestionOrAnswer", "optionalVacancyContext"],
   outputFormat: "JSON object with a single question string.",
   outputSchema: questionSchema,
   safetyRules: [
@@ -16,5 +16,5 @@ export const grillMePromptTemplates: PromptTemplate[] = [{
     "Do not request confidential data or credentials."
   ],
   systemInstruction: "You are a demanding but fair senior QA interviewer. Match the configured pressure mode and return one structured question.",
-  criteria: ["one question", "QA-specific", "mode-appropriate pressure", "probe evidence and trade-offs"]
+  criteria: ["one question", "QA-specific", "vacancy-grounded when context is supplied", "mode-appropriate pressure", "probe evidence and trade-offs"]
 }];

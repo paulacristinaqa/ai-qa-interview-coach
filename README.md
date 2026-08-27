@@ -203,6 +203,10 @@ Endpoints:
 
 Modo de entrevista tecnica por tema, idioma, nivel e pressao. Os idiomas disponiveis agora sao Portugues e Ingles. Os temas iniciais seedados sao API Testing, SQL, Test Design, Automation, Behavioral e Agile/QA Process. Os niveis sao basic, intermediate e advanced. Os modos sao standard, light-pressure e realistic.
 
+No detalhe de uma vaga em `/career/jobs`, `Treinar para esta vaga` abre o Grill Me com cargo, empresa, senioridade, idioma, descricao e analise estruturada como contexto. O sistema sugere um tema inicial e mantem requisitos e lacunas da vaga nos follow-ups. Sem uma vaga selecionada, o comportamento anterior permanece inalterado.
+
+Com `AI_PROVIDER=mock`, as perguntas direcionadas sao deterministicas e gratuitas. Com `AI_PROVIDER=ollama`, o template versionado `grill-me.question@1.1.0` pode gerar variacoes localmente, com fallback automatico para o mock.
+
 Endpoints:
 
 - `POST /api/v1/grill-me/sessions`
@@ -389,10 +393,12 @@ Endpoints:
 20. Abrir Career Intelligence > Jobs e cadastrar uma oportunidade manual.
 21. Filtrar a oportunidade, abrir o detalhe e editar status ou observacoes.
 22. Clicar em `Analisar vaga` e conferir aderencia, requisitos, lacunas e plano de preparacao.
-23. Abrir Career Intelligence > Applications e adicionar a vaga ao pipeline.
-24. Alterar a etapa para entrevista, registrar uma proxima acao e conferir os contadores.
-25. Remover o acompanhamento e confirmar que a oportunidade continua disponivel em Jobs.
-26. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+23. Clicar em `Treinar para esta vaga`, conferir o contexto carregado e iniciar o Grill Me.
+24. Responder uma pergunta e confirmar que o follow-up continua relacionado aos requisitos da vaga.
+25. Abrir Career Intelligence > Applications e adicionar a vaga ao pipeline.
+26. Alterar a etapa para entrevista, registrar uma proxima acao e conferir os contadores.
+27. Remover o acompanhamento e confirmar que a oportunidade continua disponivel em Jobs.
+28. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 

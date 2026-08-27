@@ -201,6 +201,24 @@ describe("main API endpoints", () => {
     expect(learning.json().helpLevel).toBe("hint");
   });
 
+  it("passes an owned job opportunity context to Grill Me", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/grill-me/sessions",
+      headers: { authorization },
+      payload: {
+        topic: "API Testing",
+        language: "en",
+        level: "advanced",
+        mode: "realistic",
+        opportunityId: "job-1"
+      }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(grillMeService.start).toHaveBeenCalledWith("single-user", expect.objectContaining({ opportunityId: "job-1" }));
+  });
+
   it("routes Knowledge, CRI and Developer Diary for the authenticated user", async () => {
     const note = await app.inject({
       method: "POST",

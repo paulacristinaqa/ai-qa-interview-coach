@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import type { JobAnalysis, JobOpportunity, JobStatus, WorkModel } from "../../../lib/types";
 
 export const statusLabels: Record<JobStatus, string> = {
@@ -57,6 +58,7 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
       <div className="panel-header">
         <div><span className="helper-text">{job.company}</span><h2>{job.title}{job.favorite ? " (favorita)" : ""}</h2></div>
         <div className="actions">
+          <Link className="button-link" href={`/grill-me?opportunityId=${encodeURIComponent(job.id)}`}>Treinar para esta vaga</Link>
           <button type="button" onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? "Analisando..." : job.analysis ? "Analisar novamente" : "Analisar vaga"}
           </button>

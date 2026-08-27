@@ -1,3 +1,4 @@
+import { NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { AiGateway } from "../ai/ai-gateway.service";
 import { PrismaService } from "../database/prisma.service";
@@ -39,7 +40,7 @@ describe("GrillMeService", () => {
     };
     const prisma = {
       interviewSession: {
-        findUnique: vi.fn().mockResolvedValue(session),
+        findFirst: vi.fn().mockResolvedValue(session),
         findUniqueOrThrow: vi.fn().mockResolvedValue(updated)
       },
       interviewTurn: { update: vi.fn(), create: vi.fn() },
@@ -70,5 +71,56 @@ describe("GrillMeService", () => {
 
     expect(result.session.turns[0].question).toBe("Local Ollama Grill Me question");
     expect(ai.generate).toHaveBeenCalledOnce();
+  });
+
+  it("grounds opening questions in an owned job opportunity", async () => {
+    const create = vi.fn().mockImplementation(({ data }) => Promise.resolve({
+      id: "session-job", language: data.language, targetRole: data.targetRole, seniority: data.seniority,
+      topic: data.topic, difficulty: data.difficulty, interviewerStyle: data.interviewerStyle,
+      status: "started", startedAt: new Date("2026-08-27T10:00:00Z"),
+      turns: [{ orderIndex: 1, question: data.turns.create.question, answer: null, coachNote: null }]
+    }));
+    const prisma = {
+      jobOpportunity: { findFirst: vi.fn().mockResolvedValue({
+        id: "job-1", userId: "user-1", title: "Senior QA Engineer", company: "Example Labs",
+        seniority: "Senior", originalDescription: "API automation role", analysis: {
+          technicalSummary: "API quality leadership", requiredRequirements: ["Contract testing"],
+          technologies: ["Playwright"], gaps: ["Performance testing"]
+        }
+      }) },
+      interviewSession: { create }
+    } as unknown as PrismaService;
+    const questions = { next: vi.fn().mockResolvedValue({ id: "q-1", prompt: "Explain your API strategy." }) } as unknown as QuestionsService;
+    const ai = { generate: vi.fn().mockImplementation((_request, fallback) => Promise.resolve({ output: fallback })) } as unknown as AiGateway;
+
+    const result = await new GrillMeService(prisma, questions, ai).start("user-1", {
+      topic: "API Testing", language: "en", level: "advanced", mode: "realistic", opportunityId: "job-1"
+    });
+
+    expect(result.jobContext).toEqual({ id: "job-1", title: "Senior QA Engineer", company: "Example Labs" });
+    expect(result.session.targetRole).toBe("Senior QA Engineer");
+    expect(result.session.interviewerStyle).toBe("grill-me:realistic:job:job-1");
+    expect(result.session.turns[0].question).toContain("Senior QA Engineer role at Example Labs");
+    expect(ai.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        promptTemplateVersion: "grill-me.question@1.1.0",
+        context: expect.objectContaining({ vacancy: expect.objectContaining({ requirements: ["Contract testing"] }) })
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it("rejects a vacancy or session that is not owned by the user", async () => {
+    const prisma = {
+      jobOpportunity: { findFirst: vi.fn().mockResolvedValue(null) },
+      interviewSession: { findFirst: vi.fn().mockResolvedValue(null) }
+    } as unknown as PrismaService;
+    const questions = { next: vi.fn() } as unknown as QuestionsService;
+    const service = new GrillMeService(prisma, questions);
+
+    await expect(service.start("user-1", {
+      topic: "API Testing", language: "en", level: "advanced", mode: "realistic", opportunityId: "job-other"
+    })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.answer("user-1", "session-other", { answer: "Attempt" })).rejects.toBeInstanceOf(NotFoundException);
   });
 });
