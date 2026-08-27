@@ -53,7 +53,6 @@ describe("AI output validation", () => {
     const output = {
       cvMarkdown: "# CV",
       coverLetter: "Cover letter",
-      chineseSummary: "中文摘要",
       fitMatrix: [],
       unsupportedClaims: ["Invented certification"]
     };
@@ -61,5 +60,16 @@ describe("AI output validation", () => {
     expect(() => parseAndValidateAiOutput(JSON.stringify(output), careerDocumentPackSchema)).toThrowError(
       AiResponseValidationError
     );
+  });
+
+  it("accepts the reduced Career document pack", () => {
+    const output = {
+      cvMarkdown: "# CV",
+      coverLetter: "Cover letter",
+      fitMatrix: [{ requirement: "API testing", evidence: "Project evidence", status: "supported" }],
+      unsupportedClaims: []
+    };
+
+    expect(parseAndValidateAiOutput(JSON.stringify(output), careerDocumentPackSchema)).toEqual(output);
   });
 });
