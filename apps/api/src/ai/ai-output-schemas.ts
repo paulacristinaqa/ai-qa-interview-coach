@@ -186,14 +186,7 @@ export class AiResponseValidationError extends Error {
   }
 }
 
-export function parseAndValidateAiOutput<TOutput>(text: string, schema: Record<string, unknown>): TOutput {
-  let output: unknown;
-  try {
-    output = JSON.parse(text);
-  } catch {
-    throw new AiResponseValidationError("invalid_json");
-  }
-
+export function validateAiOutput<TOutput>(schema: Record<string, unknown>, output: unknown): TOutput {
   let validator = validatorCache.get(schema);
   if (!validator) {
     validator = ajv.compile(schema);
@@ -203,6 +196,17 @@ export function parseAndValidateAiOutput<TOutput>(text: string, schema: Record<s
     throw new AiResponseValidationError("schema_mismatch", validator.errors ?? []);
   }
   return output as TOutput;
+}
+
+export function parseAndValidateAiOutput<TOutput>(text: string, schema: Record<string, unknown>): TOutput {
+  let output: unknown;
+  try {
+    output = JSON.parse(text);
+  } catch {
+    throw new AiResponseValidationError("invalid_json");
+  }
+
+  return validateAiOutput<TOutput>(schema, output);
 }
 
 function stringArraySchema() {

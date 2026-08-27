@@ -237,6 +237,27 @@ paths:
           description: Opportunity deleted
         "404":
           description: Opportunity not found for the authenticated user
+  /jobs/{opportunityId}/analyze:
+    post:
+      summary: Generate and persist a structured job analysis
+      description: Uses the configured AI provider with deterministic mock fallback and validates the structured response before persistence.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OpportunityId"
+      responses:
+        "201":
+          description: Analysis generated or replaced for the opportunity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobAnalysis"
+        "401":
+          description: Missing or invalid token
+        "404":
+          description: Opportunity not found for the authenticated user
+        "502":
+          description: AI response could not be validated and no invalid result was persisted
 components:
   securitySchemes:
     bearerAuth:
@@ -466,3 +487,42 @@ components:
             notes: { type: [string, "null"] }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
+            analysis:
+              oneOf:
+                - $ref: "#/components/schemas/JobAnalysis"
+                - type: "null"
+    JobAnalysis:
+      type: object
+      required: [id, opportunityId, technicalSummary, responsibilities, requiredRequirements, preferredRequirements, technologies, softSkills, estimatedSeniority, profileFit, gaps, preparationPlan, providerName, modelName, promptTemplateVersion, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        opportunityId: { type: string, format: uuid }
+        technicalSummary: { type: string }
+        responsibilities: { type: array, items: { type: string } }
+        requiredRequirements: { type: array, items: { type: string } }
+        preferredRequirements: { type: array, items: { type: string } }
+        technologies: { type: array, items: { type: string } }
+        softSkills: { type: array, items: { type: string } }
+        estimatedSeniority: { type: string }
+        profileFit:
+          type: object
+          required: [score, summary, evidence]
+          properties:
+            score: { type: number, minimum: 0, maximum: 100 }
+            summary: { type: string }
+            evidence: { type: array, items: { type: string } }
+        gaps: { type: array, items: { type: string } }
+        preparationPlan:
+          type: array
+          items:
+            type: object
+            required: [priority, action, rationale]
+            properties:
+              priority: { type: string, enum: [high, medium, low] }
+              action: { type: string }
+              rationale: { type: string }
+        providerName: { type: string }
+        modelName: { type: string }
+        promptTemplateVersion: { type: string, example: "career.job-analysis@1.0.0" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

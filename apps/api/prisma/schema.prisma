@@ -47,10 +47,35 @@ model JobOpportunity {
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
+  analysis JobAnalysis?
 
   @@index([userId, status])
   @@index([userId, workModel])
   @@map("job_opportunities")
+}
+
+model JobAnalysis {
+  id                    String   @id @default(uuid())
+  opportunityId         String   @unique @map("opportunity_id")
+  technicalSummary      String   @map("technical_summary")
+  responsibilities      Json
+  requiredRequirements  Json     @map("required_requirements")
+  preferredRequirements Json     @map("preferred_requirements")
+  technologies          Json
+  softSkills            Json     @map("soft_skills")
+  estimatedSeniority    String   @map("estimated_seniority")
+  profileFit             Json     @map("profile_fit")
+  gaps                   Json
+  preparationPlan        Json     @map("preparation_plan")
+  providerName           String   @map("provider_name")
+  modelName              String   @map("model_name")
+  promptTemplateVersion  String   @map("prompt_template_version")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("job_analyses")
 }
 
 model InterviewSession {

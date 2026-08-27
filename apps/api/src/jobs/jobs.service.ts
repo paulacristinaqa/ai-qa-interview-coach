@@ -32,12 +32,16 @@ export class JobsService {
     }
     return this.prisma.jobOpportunity.findMany({
       where,
+      include: { analysis: true },
       orderBy: [{ favorite: "desc" }, { updatedAt: "desc" }]
     });
   }
 
   async get(userId: string, opportunityId: string) {
-    const opportunity = await this.prisma.jobOpportunity.findFirst({ where: { id: opportunityId, userId } });
+    const opportunity = await this.prisma.jobOpportunity.findFirst({
+      where: { id: opportunityId, userId },
+      include: { analysis: true }
+    });
     if (!opportunity) throw new NotFoundException("Job opportunity not found");
     return opportunity;
   }
@@ -48,7 +52,11 @@ export class JobsService {
 
   async update(userId: string, opportunityId: string, body: UpdateJobOpportunityRequest) {
     await this.get(userId, opportunityId);
-    return this.prisma.jobOpportunity.update({ where: { id: opportunityId }, data: validateUpdate(body) });
+    return this.prisma.jobOpportunity.update({
+      where: { id: opportunityId },
+      data: validateUpdate(body),
+      include: { analysis: true }
+    });
   }
 
   async remove(userId: string, opportunityId: string) {
