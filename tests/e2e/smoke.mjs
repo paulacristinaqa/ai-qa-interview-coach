@@ -92,6 +92,28 @@ const opportunity = await request("/job-opportunities", {
     originalDescription: "Own API quality, automation strategy and release evidence."
   })
 });
+const targetedGrill = await request("/grill-me/sessions", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    topic: "API Testing",
+    language: "en",
+    level: "advanced",
+    mode: "realistic",
+    opportunityId: opportunity.id
+  })
+});
+assert.equal(targetedGrill.session.targetRole, opportunity.title);
+assert.ok(targetedGrill.session.interviewerStyle.includes(opportunity.id), "targeted Grill Me should preserve the opportunity reference");
+assert.ok(targetedGrill.session.turns[0].question.includes(opportunity.title), "opening question should reference the vacancy");
+
+const targetedFollowUp = await request(`/grill-me/sessions/${targetedGrill.session.id}/answers`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({ answer: "I would map API contract risks, automate critical paths, isolate test data and report release evidence." })
+});
+assert.ok(targetedFollowUp.session.turns[1]?.question.includes("this role"), "follow-up should remain grounded in the vacancy");
+
 const application = await request("/job-applications", {
   method: "POST",
   headers,
@@ -117,5 +139,5 @@ const preservedOpportunity = await request(`/job-opportunities/${opportunity.id}
 assert.equal(preservedOpportunity.id, opportunity.id, "removing an application should preserve its opportunity");
 await request(`/job-opportunities/${opportunity.id}`, { method: "DELETE", headers });
 
-console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary and Job Applications`);
+console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary, targeted Grill Me and Job Applications`);
 import assert from "node:assert/strict";

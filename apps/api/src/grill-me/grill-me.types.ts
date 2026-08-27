@@ -8,6 +8,7 @@ export interface StartGrillMeRequest {
   level: GrillMeLevel;
   mode: GrillMeMode;
   targetRole?: string;
+  opportunityId?: string;
 }
 
 export interface SubmitGrillMeAnswerRequest {

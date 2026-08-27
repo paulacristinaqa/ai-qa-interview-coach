@@ -108,6 +108,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InterviewSession"
+  /grill-me/sessions:
+    post:
+      summary: Start a Grill Me session with optional job context
+      description: When opportunityId is supplied, the owned vacancy and its persisted analysis ground the opening question and follow-ups.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartGrillMeRequest"
+      responses:
+        "201":
+          description: Grill Me session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrillMeResponse"
+        "404":
+          description: Question or owned opportunity not found
+  /grill-me/sessions/{sessionId}/answers:
+    post:
+      summary: Answer a Grill Me question and generate the next vacancy-grounded follow-up
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitGrillMeAnswerRequest"
+      responses:
+        "201":
+          description: Answer recorded and session advanced
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrillMeResponse"
+        "404":
+          description: Grill Me session not found for the authenticated user
   /learning/hint:
     post:
       summary: Request progressive help
@@ -447,6 +490,39 @@ components:
       properties:
         answer:
           type: string
+    StartGrillMeRequest:
+      type: object
+      required: [topic, language, level, mode]
+      properties:
+        topic: { type: string }
+        language: { type: string, enum: [pt-BR, en] }
+        level: { type: string, enum: [basic, intermediate, advanced] }
+        mode: { type: string, enum: [standard, light-pressure, realistic] }
+        targetRole: { type: string }
+        opportunityId: { type: string, format: uuid }
+    SubmitGrillMeAnswerRequest:
+      type: object
+      required: [answer]
+      properties:
+        answer: { type: string }
+        helpUsed: { type: boolean }
+    GrillMeResponse:
+      type: object
+      required: [mode, session]
+      properties:
+        mode: { type: string, enum: [standard, light-pressure, realistic] }
+        level: { type: string, enum: [basic, intermediate, advanced] }
+        sourceQuestion: { type: object }
+        attempt: { type: [object, "null"] }
+        jobContext:
+          type: object
+          required: [id, title, company]
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+            company: { type: string }
+        session:
+          $ref: "#/components/schemas/InterviewSession"
     FeedbackReport:
       type: object
       properties:
