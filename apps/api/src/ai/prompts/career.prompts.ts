@@ -64,18 +64,19 @@ export const careerPromptTemplates: PromptTemplate[] = [
     id: "career.document-pack",
     domain: "career",
     task: "career-analysis",
-    version: "1.0.0",
+    version: "2.0.0",
     objective: "Create tailored career documents using only supplied candidate facts.",
-    expectedInputs: ["candidateProfile", "jobOpportunity", "jobAnalysis"],
-    outputFormat: "JSON with cvMarkdown, coverLetter, chineseSummary, fitMatrix and an empty unsupportedClaims array.",
+    expectedInputs: ["language", "candidateProfile", "jobOpportunity", "jobAnalysis"],
+    outputFormat: "JSON with cvMarkdown, coverLetter, fitMatrix and an empty unsupportedClaims array.",
     outputSchema: careerDocumentPackSchema,
     safetyRules: [
       ...careerSafetyRules,
       "Never add employers, dates, achievements, tools, education, certifications or language proficiency not explicitly supplied.",
-      "Represent missing evidence as a gap instead of improving the candidate profile."
+      "Represent missing evidence as a gap instead of improving the candidate profile.",
+      "Generate documents only in the requested supported language: pt-BR or en."
     ],
     systemInstruction:
-      "You are an evidence-bound career document editor. Tailor wording and ordering, but never create facts. Write the CV and cover letter in English and the summary in Simplified Chinese.",
-    criteria: ["ATS-readable CV", "concise cover letter", "Simplified Chinese summary", "evidence traceability", "zero unsupported claims"]
+      "You are an evidence-bound career document editor. Tailor wording and ordering, but never create facts. Write the CV and cover letter in the requested language, limited to Brazilian Portuguese or English.",
+    criteria: ["requested pt-BR or en language", "ATS-readable CV", "concise cover letter", "evidence traceability", "zero unsupported claims"]
   }
 ];

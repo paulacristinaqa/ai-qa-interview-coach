@@ -157,7 +157,6 @@ export const careerDocumentPackSchema: Record<string, unknown> = {
   properties: {
     cvMarkdown: { type: "string", minLength: 1 },
     coverLetter: { type: "string", minLength: 1 },
-    chineseSummary: { type: "string", minLength: 1 },
     fitMatrix: {
       type: "array",
       items: {
@@ -173,7 +172,7 @@ export const careerDocumentPackSchema: Record<string, unknown> = {
     },
     unsupportedClaims: { type: "array", maxItems: 0, items: { type: "string" } }
   },
-  required: ["cvMarkdown", "coverLetter", "chineseSummary", "fitMatrix", "unsupportedClaims"]
+  required: ["cvMarkdown", "coverLetter", "fitMatrix", "unsupportedClaims"]
 };
 
 const ajv = new Ajv({ allErrors: true, strict: true });

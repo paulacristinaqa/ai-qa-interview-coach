@@ -51,4 +51,15 @@ describe("prompt template registry", () => {
     expect(request.criteria).toEqual(["criterio especifico"]);
     expect(getPromptTemplate("technical-lab.feedback").criteria).toEqual(originalCriteria);
   });
+
+  it("limits the reduced Career document pack to Portuguese or English", () => {
+    const template = getPromptTemplate("career.document-pack");
+
+    expect(template.version).toBe("2.0.0");
+    expect(template.expectedInputs).toContain("language");
+    expect(template.systemInstruction).toContain("Brazilian Portuguese or English");
+    expect(Object.keys((template.outputSchema as { properties: Record<string, unknown> }).properties)).toEqual([
+      "cvMarkdown", "coverLetter", "fitMatrix", "unsupportedClaims"
+    ]);
+  });
 });
