@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AiGateway } from "./ai/ai-gateway.service";
+import { ApplicationsController } from "./applications/applications.controller";
+import { ApplicationsService } from "./applications/applications.service";
 import { MockAiProvider } from "./ai/mock-ai.provider";
 import { OllamaAiProvider } from "./ai/ollama-ai.provider";
 import { AuthController } from "./auth/auth.controller";
@@ -47,7 +49,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     CriController,
     DiaryController,
     JobsController,
-    JobAnalysisController
+    JobAnalysisController,
+    ApplicationsController
   ],
   providers: [
     PrismaService,
@@ -67,7 +70,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     CriService,
     DiaryService,
     JobsService,
-    JobAnalysisService
+    JobAnalysisService,
+    ApplicationsService
   ]
 })
 export class AppModule {}

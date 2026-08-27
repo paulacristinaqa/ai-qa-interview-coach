@@ -116,6 +116,7 @@ export interface JobOpportunity {
   createdAt: string;
   updatedAt: string;
   analysis?: JobAnalysis | null;
+  application?: { id: string } | null;
 }
 
 export interface JobAnalysis {
@@ -136,4 +137,19 @@ export interface JobAnalysis {
   promptTemplateVersion: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ApplicationStatus = "planned" | "applied" | "screening" | "interview" | "technical" | "offer" | "hired" | "rejected" | "withdrawn";
+
+export interface JobApplication {
+  id: string;
+  opportunityId: string;
+  status: ApplicationStatus;
+  appliedAt: string | null;
+  nextAction: string | null;
+  nextActionAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  opportunity: JobOpportunity;
 }

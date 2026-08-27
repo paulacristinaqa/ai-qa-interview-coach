@@ -677,6 +677,62 @@ pre {
   background: #a33a2b;
 }
 
+.application-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.application-summary article {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.application-summary span,
+.application-dates {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.application-summary strong {
+  font-size: 1.7rem;
+}
+
+.application-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f9fafc;
+}
+
+.application-card h3,
+.application-card p {
+  margin: 0;
+}
+
+.application-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.status-pill.hired {
+  background: #dff3df;
+  color: #22612a;
+}
+
+.status-pill.withdrawn {
+  background: #edf0f4;
+  color: var(--muted);
+}
+
 .job-analysis {
   display: grid;
   gap: 18px;
@@ -757,7 +813,8 @@ pre {
 
   .jobs-layout,
   .job-filters,
-  .analysis-grid {
+  .analysis-grid,
+  .application-summary {
     grid-template-columns: 1fr;
   }
 

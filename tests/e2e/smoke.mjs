@@ -79,5 +79,43 @@ assert.ok(history.interviews?.some((item) => item.id === session.id), "history s
 const diaryEntries = await request("/diary/entries", { headers });
 assert.ok(diaryEntries.some((item) => item.id === diaryEntry.id), "Developer Diary should contain the smoke entry");
 
-console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI and Developer Diary history`);
+const opportunity = await request("/job-opportunities", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    title: `E2E QA Engineer ${Date.now()}`,
+    company: "E2E Example Labs",
+    country: "Portugal",
+    workModel: "remote",
+    seniority: "Senior",
+    language: "English",
+    originalDescription: "Own API quality, automation strategy and release evidence."
+  })
+});
+const application = await request("/job-applications", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    opportunityId: opportunity.id,
+    status: "applied",
+    appliedAt: "2026-08-27",
+    nextAction: "Prepare recruiter conversation"
+  })
+});
+const applications = await request("/job-applications?status=applied&search=E2E", { headers });
+assert.ok(applications.some((item) => item.id === application.id), "application should be visible in the filtered pipeline");
+
+const advancedApplication = await request(`/job-applications/${application.id}`, {
+  method: "PATCH",
+  headers,
+  body: JSON.stringify({ status: "interview", nextAction: "Prepare API testing examples" })
+});
+assert.equal(advancedApplication.status, "interview");
+
+await request(`/job-applications/${application.id}`, { method: "DELETE", headers });
+const preservedOpportunity = await request(`/job-opportunities/${opportunity.id}`, { headers });
+assert.equal(preservedOpportunity.id, opportunity.id, "removing an application should preserve its opportunity");
+await request(`/job-opportunities/${opportunity.id}`, { method: "DELETE", headers });
+
+console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary and Job Applications`);
 import assert from "node:assert/strict";
