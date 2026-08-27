@@ -163,7 +163,7 @@ Depois do login, a navegacao lateral organiza o MVP por dominio:
 | `/developer-diary` | Diario, sugestoes e exportacao | Operacional |
 | `/settings` | Sessao local e logout | Operacional |
 | `/career/jobs` | Job Intelligence Manual | Operacional |
-| `/career/applications` | Applications | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/applications` | Pipeline manual de candidaturas | Operacional |
 | `/career/companies` | Companies | Rota preparada, sem funcionalidade nesta etapa |
 | `/career/documents` | Documents | Rota preparada, sem funcionalidade nesta etapa |
 
@@ -339,6 +339,20 @@ Endpoints:
 
 Os contratos completos estao registrados em `docs/api/openapi.yaml`.
 
+### Applications
+
+Permite acompanhar em `/career/applications` uma candidatura para cada vaga cadastrada. O pipeline registra etapa, data de envio, proxima acao, prazo e observacoes, com busca por cargo ou empresa e filtro por etapa.
+
+A remocao do acompanhamento preserva a vaga. A exclusao da vaga remove sua candidatura associada. Nenhuma atualizacao de status e feita implicitamente entre os dois modulos, evitando alterar regras de negocio sem uma decisao explicita.
+
+Endpoints:
+
+- `GET /api/v1/job-applications`
+- `GET /api/v1/job-applications/:applicationId`
+- `POST /api/v1/job-applications`
+- `PATCH /api/v1/job-applications/:applicationId`
+- `DELETE /api/v1/job-applications/:applicationId`
+
 ### Developer Diary
 
 Permite registrar decisoes, ADR simples, changelog, future improvements, contexto, proximos passos e exportar o diario em Markdown. Tambem sugere entradas automaticamente com base nas evidencias recentes.
@@ -375,7 +389,10 @@ Endpoints:
 20. Abrir Career Intelligence > Jobs e cadastrar uma oportunidade manual.
 21. Filtrar a oportunidade, abrir o detalhe e editar status ou observacoes.
 22. Clicar em `Analisar vaga` e conferir aderencia, requisitos, lacunas e plano de preparacao.
-23. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+23. Abrir Career Intelligence > Applications e adicionar a vaga ao pipeline.
+24. Alterar a etapa para entrevista, registrar uma proxima acao e conferir os contadores.
+25. Remover o acompanhamento e confirmar que a oportunidade continua disponivel em Jobs.
+26. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 

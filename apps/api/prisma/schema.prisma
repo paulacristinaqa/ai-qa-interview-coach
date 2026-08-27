@@ -17,13 +17,14 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   interviewSessions InterviewSession[]
-  knowledgeItems     KnowledgeItem[]
-  criSnapshots       CriSnapshot[]
-  diaryEntries       DiaryEntry[]
-  learningEvents     LearningEvent[]
-  questionAttempts   QuestionAttempt[]
-  technicalAttempts  TechnicalAttempt[]
-  jobOpportunities   JobOpportunity[]
+  knowledgeItems    KnowledgeItem[]
+  criSnapshots      CriSnapshot[]
+  diaryEntries      DiaryEntry[]
+  learningEvents    LearningEvent[]
+  questionAttempts  QuestionAttempt[]
+  technicalAttempts TechnicalAttempt[]
+  jobOpportunities  JobOpportunity[]
+  jobApplications   JobApplication[]
 
   @@map("users")
 }
@@ -46,12 +47,33 @@ model JobOpportunity {
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id])
-  analysis JobAnalysis?
+  user        User            @relation(fields: [userId], references: [id])
+  analysis    JobAnalysis?
+  application JobApplication?
 
   @@index([userId, status])
   @@index([userId, workModel])
   @@map("job_opportunities")
+}
+
+model JobApplication {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  opportunityId String    @unique @map("opportunity_id")
+  status        String    @default("planned")
+  appliedAt     DateTime? @map("applied_at")
+  nextAction    String?   @map("next_action")
+  nextActionAt  DateTime? @map("next_action_at")
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user        User           @relation(fields: [userId], references: [id])
+  opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, nextActionAt])
+  @@map("job_applications")
 }
 
 model JobAnalysis {
@@ -64,14 +86,14 @@ model JobAnalysis {
   technologies          Json
   softSkills            Json     @map("soft_skills")
   estimatedSeniority    String   @map("estimated_seniority")
-  profileFit             Json     @map("profile_fit")
-  gaps                   Json
-  preparationPlan        Json     @map("preparation_plan")
-  providerName           String   @map("provider_name")
-  modelName              String   @map("model_name")
-  promptTemplateVersion  String   @map("prompt_template_version")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  profileFit            Json     @map("profile_fit")
+  gaps                  Json
+  preparationPlan       Json     @map("preparation_plan")
+  providerName          String   @map("provider_name")
+  modelName             String   @map("model_name")
+  promptTemplateVersion String   @map("prompt_template_version")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
@@ -91,9 +113,9 @@ model InterviewSession {
   startedAt        DateTime  @default(now()) @map("started_at")
   completedAt      DateTime? @map("completed_at")
 
-  user    User            @relation(fields: [userId], references: [id])
-  turns   InterviewTurn[]
-  reports FeedbackReport[]
+  user           User             @relation(fields: [userId], references: [id])
+  turns          InterviewTurn[]
+  reports        FeedbackReport[]
   learningEvents LearningEvent[]
 
   @@map("interview_sessions")
@@ -122,7 +144,7 @@ model FeedbackReport {
   promptTemplateVersion String?  @map("prompt_template_version")
   createdAt             DateTime @default(now()) @map("created_at")
 
-  session    InterviewSession   @relation(fields: [sessionId], references: [id])
+  session    InterviewSession    @relation(fields: [sessionId], references: [id])
   dimensions FeedbackDimension[]
 
   @@map("feedback_reports")
@@ -188,15 +210,15 @@ model DiaryEntry {
 }
 
 model LearningEvent {
-  id             String            @id @default(uuid())
-  userId         String            @map("user_id")
-  sessionId      String?           @map("session_id")
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  sessionId      String?  @map("session_id")
   concept        String
-  helpLevel      String            @map("help_level")
-  retryRequested Boolean           @default(false) @map("retry_requested")
-  language       String            @default("pt-BR")
+  helpLevel      String   @map("help_level")
+  retryRequested Boolean  @default(false) @map("retry_requested")
+  language       String   @default("pt-BR")
   content        Json
-  createdAt      DateTime          @default(now()) @map("created_at")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   user    User              @relation(fields: [userId], references: [id])
   session InterviewSession? @relation(fields: [sessionId], references: [id])
@@ -205,17 +227,17 @@ model LearningEvent {
 }
 
 model Question {
-  id          String            @id @default(uuid())
+  id          String   @id @default(uuid())
   topic       String
-  language    String            @default("pt-BR")
+  language    String   @default("pt-BR")
   level       Int
   type        String
   competency  String
   prompt      String
   criteria    Json
   hints       Json
-  modelAnswer String            @map("model_answer")
-  createdAt   DateTime          @default(now()) @map("created_at")
+  modelAnswer String   @map("model_answer")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   attempts QuestionAttempt[]
 
@@ -240,14 +262,14 @@ model QuestionAttempt {
 }
 
 model TechnicalChallenge {
-  id                 String             @id @default(uuid())
+  id                 String   @id @default(uuid())
   area               String
   title              String
   difficulty         String
   context            String
-  evaluationCriteria Json               @map("evaluation_criteria")
-  modelSolution      String             @map("model_solution")
-  createdAt          DateTime           @default(now()) @map("created_at")
+  evaluationCriteria Json     @map("evaluation_criteria")
+  modelSolution      String   @map("model_solution")
+  createdAt          DateTime @default(now()) @map("created_at")
 
   attempts TechnicalAttempt[]
 

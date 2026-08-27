@@ -4,6 +4,8 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AuthController } from "../auth/auth.controller";
 import { AuthService } from "../auth/auth.service";
+import { ApplicationsController } from "../applications/applications.controller";
+import { ApplicationsService } from "../applications/applications.service";
 import { CriController } from "../cri/cri.controller";
 import { CriService } from "../cri/cri.service";
 import { DiaryController } from "../diary/diary.controller";
@@ -80,6 +82,13 @@ describe("main API endpoints", () => {
       profileFit: { score: 70, summary: "Evidence-based fit", evidence: ["CRI"] }
     })
   };
+  const applicationsService = {
+    list: vi.fn().mockResolvedValue([{ id: "application-1", status: "applied", opportunity: { id: "job-1" } }]),
+    get: vi.fn(),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "application-1", userId, ...body, status: body.status ?? "planned" })),
+    update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
+    remove: vi.fn().mockResolvedValue(undefined)
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -93,6 +102,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, DiaryService], DiaryController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobsService], JobsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService], JobAnalysisController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, ApplicationsService], ApplicationsController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -106,7 +116,8 @@ describe("main API endpoints", () => {
         CriController,
         DiaryController,
         JobsController,
-        JobAnalysisController
+        JobAnalysisController,
+        ApplicationsController
       ],
       providers: [
         AuthService,
@@ -119,7 +130,8 @@ describe("main API endpoints", () => {
         { provide: CriService, useValue: criService },
         { provide: DiaryService, useValue: diaryService },
         { provide: JobsService, useValue: jobsService },
-        { provide: JobAnalysisService, useValue: jobAnalysisService }
+        { provide: JobAnalysisService, useValue: jobAnalysisService },
+        { provide: ApplicationsService, useValue: applicationsService }
       ]
     }).compile();
 
@@ -265,5 +277,34 @@ describe("main API endpoints", () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({ id: "analysis-1", opportunityId: "job-1" });
     expect(jobAnalysisService.analyze).toHaveBeenCalledWith("single-user", "job-1");
+  });
+
+  it("routes the authenticated manual Job Application CRUD", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/job-applications",
+      headers: { authorization },
+      payload: { opportunityId: "job-1", status: "applied", appliedAt: "2026-08-27" }
+    });
+    const listed = await app.inject({
+      method: "GET",
+      url: "/api/v1/job-applications?status=applied&search=Example",
+      headers: { authorization }
+    });
+    const updated = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/job-applications/application-1",
+      headers: { authorization },
+      payload: { status: "interview", nextAction: "Prepare examples" }
+    });
+    const removed = await app.inject({
+      method: "DELETE",
+      url: "/api/v1/job-applications/application-1",
+      headers: { authorization }
+    });
+
+    expect([created.statusCode, listed.statusCode, updated.statusCode, removed.statusCode]).toEqual([201, 200, 200, 204]);
+    expect(created.json()).toMatchObject({ id: "application-1", userId: "single-user", status: "applied" });
+    expect(applicationsService.list).toHaveBeenCalledWith("single-user", { search: "Example", status: "applied" });
   });
 });

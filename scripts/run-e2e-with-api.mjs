@@ -17,7 +17,7 @@ api.once("error", (error) => { apiStartupError = error; });
 
 try {
   await waitForReadiness();
-  await runCommand(process.execPath, ["tests/e2e/smoke.mjs"], "Interview E2E smoke");
+  await runCommand(process.execPath, ["tests/e2e/smoke.mjs"], "MVP E2E smoke");
 } finally {
   if (!apiExited) {
     api.kill("SIGTERM");
