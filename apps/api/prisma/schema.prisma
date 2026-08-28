@@ -25,6 +25,7 @@ model User {
   technicalAttempts TechnicalAttempt[]
   jobOpportunities  JobOpportunity[]
   jobApplications   JobApplication[]
+  careerDocuments   CareerDocument[]
 
   @@map("users")
 }
@@ -50,6 +51,7 @@ model JobOpportunity {
   user        User            @relation(fields: [userId], references: [id])
   analysis    JobAnalysis?
   application JobApplication?
+  documents   CareerDocument[]
 
   @@index([userId, status])
   @@index([userId, workModel])
@@ -98,6 +100,29 @@ model JobAnalysis {
   opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   @@map("job_analyses")
+}
+
+model CareerDocument {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  opportunityId         String   @map("opportunity_id")
+  language              String
+  candidateProfile      String   @map("candidate_profile")
+  cvMarkdown            String   @map("cv_markdown")
+  coverLetter           String   @map("cover_letter")
+  fitMatrix             Json     @map("fit_matrix")
+  providerName          String   @map("provider_name")
+  modelName             String   @map("model_name")
+  promptTemplateVersion String   @map("prompt_template_version")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user        User           @relation(fields: [userId], references: [id])
+  opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, language])
+  @@index([userId, updatedAt])
+  @@map("career_documents")
 }
 
 model InterviewSession {

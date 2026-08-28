@@ -165,7 +165,7 @@ Depois do login, a navegacao lateral organiza o MVP por dominio:
 | `/career/jobs` | Job Intelligence Manual | Operacional |
 | `/career/applications` | Pipeline manual de candidaturas | Operacional |
 | `/career/companies` | Companies | Rota preparada, sem funcionalidade nesta etapa |
-| `/career/documents` | Documents | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/documents` | CV, carta e matriz direcionados por vaga | Operacional |
 
 A rota `/` redireciona para `/dashboard`.
 
@@ -246,6 +246,7 @@ Reinicie a API. O Ollama atende localmente em `http://127.0.0.1:11434` e nao req
 - feedback estruturado das respostas;
 - explicacoes do Guided Learning;
 - perguntas iniciais e follow-ups do Grill Me.
+- analise de vagas e documentos direcionados de Career Intelligence.
 
 As respostas passam por validacao de schema JSON. Se o Ollama nao estiver ativo, exceder o timeout ou retornar uma resposta invalida, o gateway registra apenas metadados tecnicos e usa automaticamente a resposta deterministica. Perguntas, respostas e outros dados informados pela usuaria nao sao escritos nos logs da IA.
 
@@ -271,7 +272,7 @@ Cada template declara identificador, versao semantica, objetivo, entradas espera
 
 Mudancas que possam alterar o comportamento ou o formato da resposta devem criar uma nova versao do template. O provider local recebe o schema junto com o prompt e a API valida novamente o JSON retornado. JSON malformado ou incompativel com o schema nunca e persistido: o gateway retorna ao resultado deterministico.
 
-Os templates de Technical Lab e Career preparam contratos para entregas futuras; sua existencia no registry nao habilita novas funcionalidades nem altera as regras atuais desses modulos.
+Os templates que ainda nao possuem fluxo operacional apenas preparam contratos futuros; sua existencia no registry nao habilita funcionalidades por si so.
 
 ### Banco de Perguntas Nivelado
 
@@ -357,6 +358,21 @@ Endpoints:
 - `PATCH /api/v1/job-applications/:applicationId`
 - `DELETE /api/v1/job-applications/:applicationId`
 
+### Documents direcionados por vaga
+
+Em `/career/documents`, permite gerar e salvar um pacote por vaga e idioma contendo CV em Markdown, carta de apresentacao e matriz de aderencia requisito por requisito. Os idiomas suportados sao somente Portugues (`pt-BR`) e Ingles (`en`). Gerar novamente para a mesma vaga e idioma atualiza o pacote existente; os dois idiomas podem coexistir.
+
+A usuaria informa manualmente suas experiencias, competencias, projetos e resultados verdadeiros. O gerador pode reorganizar e adaptar a redacao para a vaga, mas nao deve criar empregadores, datas, resultados, ferramentas, formacao ou certificacoes ausentes. Requisitos sem evidencia ficam marcados como lacuna. Nao cole senhas, documentos pessoais nem outros dados sensiveis, e revise sempre o rascunho antes de uma candidatura.
+
+O modo padrao `AI_PROVIDER=mock` funciona localmente e sem custo. O Ollama e opcional e usa o mesmo template versionado `career.document-pack@2.0.0`. A resposta passa por schema JSON e por uma verificacao adicional de cobertura dos requisitos e fundamentacao das evidencias antes de ser persistida. O pacote pode ser baixado em um unico arquivo Markdown.
+
+Endpoints:
+
+- `GET /api/v1/career-documents`
+- `GET /api/v1/career-documents/:documentId`
+- `POST /api/v1/career-documents/generate`
+- `DELETE /api/v1/career-documents/:documentId`
+
 ### Developer Diary
 
 Permite registrar decisoes, ADR simples, changelog, future improvements, contexto, proximos passos e exportar o diario em Markdown. Tambem sugere entradas automaticamente com base nas evidencias recentes.
@@ -398,7 +414,12 @@ Endpoints:
 25. Abrir Career Intelligence > Applications e adicionar a vaga ao pipeline.
 26. Alterar a etapa para entrevista, registrar uma proxima acao e conferir os contadores.
 27. Remover o acompanhamento e confirmar que a oportunidade continua disponivel em Jobs.
-28. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+28. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
+29. Informar ao menos 40 caracteres de evidencias profissionais verdadeiras, selecionar Portugues e gerar o pacote.
+30. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
+31. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
+32. Excluir um pacote e confirmar que a vaga continua disponivel.
+33. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
@@ -423,7 +444,7 @@ Endpoints:
 
 O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
-A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI e Developer Diary. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo: iniciar entrevista, responder, receber follow-up e feedback, atualizar o CRI e registrar a evidencia no historico e no Developer Diary.
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem os fluxos de vaga, treino direcionado, candidatura e documentos de carreira.
 
 Para smoke E2E local:
 

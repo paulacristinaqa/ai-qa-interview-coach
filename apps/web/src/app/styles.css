@@ -803,6 +803,92 @@ pre {
   font-size: 1rem;
 }
 
+.document-form-panel {
+  margin-bottom: 16px;
+}
+
+.documents-layout {
+  align-items: start;
+}
+
+.career-document-detail {
+  margin: 0;
+}
+
+.document-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.document-grid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f9fafc;
+}
+
+.document-grid pre {
+  max-height: 520px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  line-height: 1.55;
+}
+
+.fit-matrix {
+  display: grid;
+  gap: 10px;
+}
+
+.fit-row {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #8b96a6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fit-row.supported {
+  border-left-color: #2f7a47;
+}
+
+.fit-row.partial {
+  border-left-color: #a87813;
+}
+
+.fit-row.gap {
+  border-left-color: #a33a2b;
+}
+
+.fit-row > div {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fit-row p {
+  margin-bottom: 0;
+}
+
+.status-pill.supported {
+  background: #dff3df;
+  color: #22612a;
+}
+
+.status-pill.partial {
+  background: #f5edc9;
+  color: #725700;
+}
+
+.status-pill.gap {
+  background: #f6dfdc;
+  color: #822f24;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;
@@ -842,6 +928,10 @@ pre {
 
   .analysis-heading {
     display: grid;
+  }
+
+  .document-grid {
+    grid-template-columns: 1fr;
   }
 
   .job-filters label:first-child {

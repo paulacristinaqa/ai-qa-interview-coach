@@ -154,3 +154,22 @@ export interface JobApplication {
   updatedAt: string;
   opportunity: JobOpportunity;
 }
+
+export type CareerDocumentLanguage = "pt-BR" | "en";
+export type FitStatus = "supported" | "partial" | "gap";
+
+export interface CareerDocument {
+  id: string;
+  opportunityId: string;
+  language: CareerDocumentLanguage;
+  candidateProfile: string;
+  cvMarkdown: string;
+  coverLetter: string;
+  fitMatrix: Array<{ requirement: string; evidence: string; status: FitStatus }>;
+  providerName: string;
+  modelName: string;
+  promptTemplateVersion: string;
+  createdAt: string;
+  updatedAt: string;
+  opportunity: Pick<JobOpportunity, "id" | "title" | "company" | "country" | "city" | "workModel" | "seniority" | "language">;
+}

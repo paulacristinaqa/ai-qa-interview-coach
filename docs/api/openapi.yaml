@@ -388,6 +388,77 @@ paths:
           description: Application removed
         "404":
           description: Application not found for the authenticated user
+  /career-documents:
+    get:
+      summary: List saved vacancy-targeted career document packs
+      description: Returns only packs owned by the authenticated user, optionally filtered by opportunity.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: opportunityId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Career document packs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CareerDocument"
+        "401":
+          description: Missing or invalid token
+  /career-documents/generate:
+    post:
+      summary: Generate or replace one career document pack for a vacancy and language
+      description: Uses only supplied professional evidence. The deterministic mock is the zero-cost default; Ollama is optional. Output is schema- and evidence-validated before persistence.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateCareerDocumentRequest"
+      responses:
+        "201":
+          description: Generated and persisted pack
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareerDocument"
+        "400":
+          description: Invalid language or insufficient professional evidence
+        "404":
+          description: Opportunity not found for the authenticated user
+        "502":
+          description: AI response failed schema or evidence validation and was not persisted
+  /career-documents/{documentId}:
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      summary: Get a saved career document pack
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Career document pack
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CareerDocument"
+        "404":
+          description: Document not found for the authenticated user
+    delete:
+      summary: Delete a saved career document pack
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Document deleted
+        "404":
+          description: Document not found for the authenticated user
 components:
   securitySchemes:
     bearerAuth:
@@ -409,6 +480,13 @@ components:
         format: uuid
     ApplicationId:
       name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DocumentId:
+      name: documentId
       in: path
       required: true
       schema:
@@ -735,3 +813,39 @@ components:
               $ref: "#/components/schemas/JobOpportunity"
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
+    CareerDocumentLanguage:
+      type: string
+      enum: [pt-BR, en]
+    GenerateCareerDocumentRequest:
+      type: object
+      required: [opportunityId, language, candidateProfile]
+      properties:
+        opportunityId: { type: string, format: uuid }
+        language: { $ref: "#/components/schemas/CareerDocumentLanguage" }
+        candidateProfile: { type: string, minLength: 40, maxLength: 20000 }
+    FitMatrixItem:
+      type: object
+      required: [requirement, evidence, status]
+      properties:
+        requirement: { type: string }
+        evidence: { type: string }
+        status: { type: string, enum: [supported, partial, gap] }
+    CareerDocument:
+      type: object
+      required: [id, opportunityId, language, candidateProfile, cvMarkdown, coverLetter, fitMatrix, providerName, modelName, promptTemplateVersion, opportunity, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        opportunityId: { type: string, format: uuid }
+        language: { $ref: "#/components/schemas/CareerDocumentLanguage" }
+        candidateProfile: { type: string }
+        cvMarkdown: { type: string }
+        coverLetter: { type: string }
+        fitMatrix:
+          type: array
+          items: { $ref: "#/components/schemas/FitMatrixItem" }
+        providerName: { type: string }
+        modelName: { type: string }
+        promptTemplateVersion: { type: string, example: "career.document-pack@2.0.0" }
+        opportunity: { $ref: "#/components/schemas/JobOpportunity" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
