@@ -574,6 +574,75 @@ paths:
       responses:
         "204": { description: Contact removed }
         "404": { description: Contact not found inside the owned company }
+  /professional-evidence:
+    get:
+      summary: List reusable professional evidence owned by the authenticated user
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/EvidenceType" } }
+        - { name: favorite, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Filtered evidence catalog
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ProfessionalEvidence" } }
+    post:
+      summary: Add a factual item to the reusable evidence catalog
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateProfessionalEvidence" }
+      responses:
+        "201":
+          description: Evidence created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfessionalEvidence" }
+        "400": { description: Invalid evidence input }
+  /professional-evidence/{evidenceId}:
+    parameters:
+      - { $ref: "#/components/parameters/EvidenceId" }
+    get:
+      summary: Get one owned professional evidence item
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Evidence detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfessionalEvidence" }
+        "404": { description: Evidence not found for the authenticated user }
+    patch:
+      summary: Update an owned professional evidence item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateProfessionalEvidence" }
+      responses:
+        "200":
+          description: Evidence updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfessionalEvidence" }
+        "400": { description: Invalid evidence input }
+        "404": { description: Evidence not found for the authenticated user }
+    delete:
+      summary: Delete evidence while preserving snapshots in generated documents
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Evidence deleted }
+        "404": { description: Evidence not found for the authenticated user }
 components:
   securitySchemes:
     bearerAuth:
@@ -614,6 +683,11 @@ components:
       schema: { type: string, format: uuid }
     ContactId:
       name: contactId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EvidenceId:
+      name: evidenceId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -944,11 +1018,12 @@ components:
       enum: [pt-BR, en]
     GenerateCareerDocumentRequest:
       type: object
-      required: [opportunityId, language, candidateProfile]
+      required: [opportunityId, language]
       properties:
         opportunityId: { type: string, format: uuid }
         language: { $ref: "#/components/schemas/CareerDocumentLanguage" }
-        candidateProfile: { type: string, minLength: 40, maxLength: 20000 }
+        candidateProfile: { type: string, maxLength: 20000, description: Additional factual context; at least 40 characters when evidenceIds is empty. }
+        evidenceIds: { type: array, maxItems: 30, uniqueItems: true, items: { type: string, format: uuid } }
     FitMatrixItem:
       type: object
       required: [requirement, evidence, status]
@@ -958,7 +1033,7 @@ components:
         status: { type: string, enum: [supported, partial, gap] }
     CareerDocument:
       type: object
-      required: [id, opportunityId, language, candidateProfile, cvMarkdown, coverLetter, fitMatrix, providerName, modelName, promptTemplateVersion, opportunity, createdAt, updatedAt]
+      required: [id, opportunityId, language, candidateProfile, cvMarkdown, coverLetter, fitMatrix, sourceEvidenceIds, providerName, modelName, promptTemplateVersion, opportunity, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         opportunityId: { type: string, format: uuid }
@@ -969,9 +1044,10 @@ components:
         fitMatrix:
           type: array
           items: { $ref: "#/components/schemas/FitMatrixItem" }
+        sourceEvidenceIds: { type: array, items: { type: string, format: uuid } }
         providerName: { type: string }
         modelName: { type: string }
-        promptTemplateVersion: { type: string, example: "career.document-pack@2.0.0" }
+        promptTemplateVersion: { type: string, example: "career.document-pack@2.1.0" }
         opportunity: { $ref: "#/components/schemas/JobOpportunity" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -1054,3 +1130,38 @@ components:
         status: { $ref: "#/components/schemas/JobStatus" }
         seniority: { type: string }
         country: { type: string }
+    EvidenceType:
+      type: string
+      enum: [experience, project, achievement, skill, certification, education, language]
+    CreateProfessionalEvidence:
+      type: object
+      required: [type, title, description]
+      properties:
+        type: { $ref: "#/components/schemas/EvidenceType" }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+        skills: { type: array, maxItems: 25, uniqueItems: true, items: { type: string, maxLength: 100 } }
+        outcome: { type: [string, "null"], maxLength: 3000 }
+        sourceUrl: { type: [string, "null"], format: uri }
+        occurredAt: { type: [string, "null"], format: date-time }
+        favorite: { type: boolean, default: false }
+    UpdateProfessionalEvidence:
+      type: object
+      properties:
+        type: { $ref: "#/components/schemas/EvidenceType" }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, minLength: 20, maxLength: 5000 }
+        skills: { type: array, maxItems: 25, uniqueItems: true, items: { type: string, maxLength: 100 } }
+        outcome: { type: [string, "null"], maxLength: 3000 }
+        sourceUrl: { type: [string, "null"], format: uri }
+        occurredAt: { type: [string, "null"], format: date-time }
+        favorite: { type: boolean }
+    ProfessionalEvidence:
+      allOf:
+        - $ref: "#/components/schemas/CreateProfessionalEvidence"
+        - type: object
+          required: [id, type, title, description, skills, favorite, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }

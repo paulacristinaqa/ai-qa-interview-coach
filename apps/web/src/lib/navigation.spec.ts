@@ -13,7 +13,7 @@ describe("workspace navigation", () => {
   it("keeps all Career Intelligence routes available", () => {
     const career = navigationGroups.find((group) => group.label === "Career Intelligence");
     expect(career?.items.map((item) => item.href)).toEqual([
-      "/career/jobs", "/career/applications", "/career/companies", "/career/documents"
+      "/career/jobs", "/career/applications", "/career/companies", "/career/evidence", "/career/documents"
     ]);
   });
 });

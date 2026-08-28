@@ -161,22 +161,41 @@ await request(`/job-applications/${application.id}`, { method: "DELETE", headers
 const preservedOpportunity = await request(`/job-opportunities/${opportunity.id}`, { headers });
 assert.equal(preservedOpportunity.id, opportunity.id, "removing an application should preserve its opportunity");
 
+const professionalEvidence = await request("/professional-evidence", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    type: "project",
+    title: "E2E API quality project",
+    description: "Owned API quality, automation strategy and release evidence in a real QA project.",
+    skills: ["API Testing", "Automation"],
+    outcome: "Created repeatable evidence for release decisions.",
+    favorite: true
+  })
+});
+const evidenceCatalog = await request("/professional-evidence?search=API&type=project&favorite=true", { headers });
+assert.ok(evidenceCatalog.some((item) => item.id === professionalEvidence.id), "professional evidence should be reusable through catalog filters");
+
 const careerDocument = await request("/career-documents/generate", {
   method: "POST",
   headers,
   body: JSON.stringify({
     opportunityId: opportunity.id,
     language: "en",
-    candidateProfile: "I own API quality, automation strategy and release evidence through five years of QA project work."
+    evidenceIds: [professionalEvidence.id]
   })
 });
 assert.equal(careerDocument.language, "en");
 assert.ok(careerDocument.cvMarkdown.includes("Tailored professional CV"), "career pack should contain the targeted CV");
 assert.ok(careerDocument.coverLetter, "career pack should contain a cover letter");
 assert.ok(careerDocument.fitMatrix.length >= 1, "career pack should contain a fit matrix");
+assert.deepEqual(careerDocument.sourceEvidenceIds, [professionalEvidence.id], "career pack should record its reusable evidence sources");
 
 const careerDocuments = await request(`/career-documents?opportunityId=${opportunity.id}`, { headers });
 assert.ok(careerDocuments.some((item) => item.id === careerDocument.id), "career pack should be persisted for the vacancy");
+await request(`/professional-evidence/${professionalEvidence.id}`, { method: "DELETE", headers });
+const preservedCareerDocument = await request(`/career-documents/${careerDocument.id}`, { headers });
+assert.ok(preservedCareerDocument.candidateProfile.includes("E2E API quality project"), "generated documents should preserve their evidence snapshot");
 await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
 await request(`/companies/${company.id}`, { method: "DELETE", headers });
 const opportunityAfterCompanyRemoval = await request(`/job-opportunities/${opportunity.id}`, { headers });

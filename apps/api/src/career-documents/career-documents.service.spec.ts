@@ -30,7 +30,7 @@ function providerResponse(output: unknown) {
     output,
     providerName: "mock",
     modelName: "deterministic",
-    promptTemplateVersion: "career.document-pack@2.0.0",
+    promptTemplateVersion: "career.document-pack@2.1.0",
     confidenceLevel: "low" as const,
     limitations: [],
     createdAt: "2026-08-28T00:00:00.000Z"
@@ -56,7 +56,7 @@ describe("CareerDocumentsService", () => {
       expect.objectContaining({ requirement: "Playwright", status: "gap" })
     ]));
     expect(generate).toHaveBeenCalledWith(
-      expect.objectContaining({ promptTemplateVersion: "career.document-pack@2.0.0", language: "en" }),
+      expect.objectContaining({ promptTemplateVersion: "career.document-pack@2.1.0", language: "en" }),
       expect.objectContaining({ unsupportedClaims: [] })
     );
   });
@@ -106,5 +106,48 @@ describe("CareerDocumentsService", () => {
     await new CareerDocumentsService(prisma, {} as AiGateway).list("user-1", "job-1");
 
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "user-1", opportunityId: "job-1" } }));
+  });
+
+  it("builds the document profile from reusable owned evidence", async () => {
+    const upsert = vi.fn().mockImplementation(({ create }) => ({ id: "document-1", ...create }));
+    const prisma = {
+      jobOpportunity: { findFirst: vi.fn().mockResolvedValue(opportunity) },
+      professionalEvidence: { findMany: vi.fn().mockResolvedValue([{
+        id: "evidence-1",
+        userId: "user-1",
+        type: "project",
+        title: "API automation",
+        description: "Built API testing coverage with SQL data validation and risk-based scenarios.",
+        skills: ["API testing", "SQL"],
+        outcome: "Reduced regression time.",
+        occurredAt: null
+      }]) },
+      careerDocument: { upsert }
+    } as unknown as PrismaService;
+    const generate = vi.fn().mockImplementation((_prompt, fallback) => providerResponse(fallback));
+
+    const result = await new CareerDocumentsService(prisma, { generate } as unknown as AiGateway).generate("user-1", {
+      opportunityId: "job-1",
+      language: "en",
+      evidenceIds: ["evidence-1"]
+    });
+
+    expect(result.candidateProfile).toContain("[Evidence evidence-1] project: API automation");
+    expect(result.sourceEvidenceIds).toEqual(["evidence-1"]);
+    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ context: expect.objectContaining({ evidenceCatalog: [expect.objectContaining({ id: "evidence-1" })] }) }), expect.anything());
+  });
+
+  it("rejects evidence outside the authenticated user's catalog", async () => {
+    const prisma = {
+      jobOpportunity: { findFirst: vi.fn().mockResolvedValue(opportunity) },
+      professionalEvidence: { findMany: vi.fn().mockResolvedValue([]) },
+      careerDocument: { upsert: vi.fn() }
+    } as unknown as PrismaService;
+
+    await expect(new CareerDocumentsService(prisma, {} as AiGateway).generate("user-1", {
+      opportunityId: "job-1",
+      language: "en",
+      evidenceIds: ["foreign-evidence"]
+    })).rejects.toBeInstanceOf(BadRequestException);
   });
 });

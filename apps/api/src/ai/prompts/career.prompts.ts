@@ -64,9 +64,9 @@ export const careerPromptTemplates: PromptTemplate[] = [
     id: "career.document-pack",
     domain: "career",
     task: "career-analysis",
-    version: "2.0.0",
+    version: "2.1.0",
     objective: "Create tailored career documents using only supplied candidate facts.",
-    expectedInputs: ["language", "candidateProfile", "jobOpportunity", "jobAnalysis"],
+    expectedInputs: ["language", "candidateProfile", "evidenceCatalog", "jobOpportunity", "jobAnalysis"],
     outputFormat: "JSON with cvMarkdown, coverLetter, fitMatrix and an empty unsupportedClaims array.",
     outputSchema: careerDocumentPackSchema,
     safetyRules: [

@@ -4,7 +4,8 @@ export type FitStatus = "supported" | "partial" | "gap";
 export interface GenerateCareerDocumentRequest {
   opportunityId: string;
   language: CareerDocumentLanguage;
-  candidateProfile: string;
+  candidateProfile?: string;
+  evidenceIds?: string[];
 }
 
 export interface CareerDocumentOutput {

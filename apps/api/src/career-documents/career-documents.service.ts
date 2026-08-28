@@ -33,14 +33,25 @@ export class CareerDocumentsService {
   async generate(userId: string, request: GenerateCareerDocumentRequest) {
     const opportunityId = requiredText(request.opportunityId, "opportunityId", 200);
     const language = validLanguage(request.language);
-    const candidateProfile = requiredText(request.candidateProfile, "candidateProfile", 20_000);
-    if (candidateProfile.length < 40) throw new BadRequestException("candidateProfile must contain at least 40 characters");
+    const evidenceIds = validEvidenceIds(request.evidenceIds);
+    const additionalProfile = optionalProfile(request.candidateProfile);
+    if (!evidenceIds.length && additionalProfile.length < 40) {
+      throw new BadRequestException("Supply professional evidence or at least 40 characters of profile context");
+    }
 
-    const opportunity = await this.prisma.jobOpportunity.findFirst({
-      where: { id: opportunityId, userId },
-      include: { analysis: true }
-    });
+    const [opportunity, unorderedEvidence] = await Promise.all([
+      this.prisma.jobOpportunity.findFirst({ where: { id: opportunityId, userId }, include: { analysis: true } }),
+      evidenceIds.length
+        ? this.prisma.professionalEvidence.findMany({ where: { userId, id: { in: evidenceIds } } })
+        : Promise.resolve([])
+    ]);
     if (!opportunity) throw new NotFoundException("Job opportunity not found");
+    if (unorderedEvidence.length !== evidenceIds.length) throw new BadRequestException("Every evidence item must belong to the authenticated user");
+    const evidenceById = new Map(unorderedEvidence.map((item) => [item.id, item]));
+    const evidence = evidenceIds.map((id) => evidenceById.get(id)!);
+    const candidateProfile = buildCandidateProfile(evidence, additionalProfile);
+    if (candidateProfile.length < 40) throw new BadRequestException("Supply professional evidence or at least 40 characters of profile context");
+    if (candidateProfile.length > 20_000) throw new BadRequestException("Combined professional evidence is too long");
 
     const fallback = buildDeterministicDocumentPack(opportunity, language, candidateProfile);
     const generated = await this.ai.generate<CareerDocumentOutput>(
@@ -49,6 +60,7 @@ export class CareerDocumentsService {
         userInput: candidateProfile,
         context: {
           candidateProfile,
+          evidenceCatalog: evidence.map((item) => ({ id: item.id, type: item.type, title: item.title, description: item.description, skills: item.skills, outcome: item.outcome })),
           jobOpportunity: {
             title: opportunity.title,
             company: opportunity.company,
@@ -81,6 +93,7 @@ export class CareerDocumentsService {
         cvMarkdown: output.cvMarkdown,
         coverLetter: output.coverLetter,
         fitMatrix: output.fitMatrix,
+        sourceEvidenceIds: evidenceIds,
         providerName: generated.providerName,
         modelName: generated.modelName,
         promptTemplateVersion: generated.promptTemplateVersion
@@ -90,6 +103,7 @@ export class CareerDocumentsService {
         cvMarkdown: output.cvMarkdown,
         coverLetter: output.coverLetter,
         fitMatrix: output.fitMatrix,
+        sourceEvidenceIds: evidenceIds,
         providerName: generated.providerName,
         modelName: generated.modelName,
         promptTemplateVersion: generated.promptTemplateVersion
@@ -243,4 +257,42 @@ function requiredText(value: unknown, field: string, maxLength: number) {
   const normalized = value.trim();
   if (normalized.length > maxLength) throw new BadRequestException(`${field} is too long`);
   return normalized;
+}
+
+function validEvidenceIds(value: unknown) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new BadRequestException("evidenceIds must be an array of IDs");
+  }
+  const ids = [...new Set(value.map((id) => id.trim()))];
+  if (ids.length > 30) throw new BadRequestException("No more than 30 evidence items can be used");
+  return ids;
+}
+
+function optionalProfile(value: unknown) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string") throw new BadRequestException("candidateProfile is invalid");
+  const normalized = value.trim();
+  if (normalized.length > 20_000) throw new BadRequestException("candidateProfile is too long");
+  return normalized;
+}
+
+function buildCandidateProfile(evidence: Array<{
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  skills: unknown;
+  outcome: string | null;
+  occurredAt: Date | null;
+}>, additionalProfile: string) {
+  const blocks = evidence.map((item) => [
+    `[Evidence ${item.id}] ${item.type}: ${item.title}`,
+    `Description: ${item.description}`,
+    ...(stringArray(item.skills).length ? [`Skills: ${stringArray(item.skills).join(", ")}`] : []),
+    ...(item.outcome ? [`Outcome: ${item.outcome}`] : []),
+    ...(item.occurredAt ? [`Date: ${item.occurredAt.toISOString().slice(0, 10)}`] : [])
+  ].join("\n"));
+  if (additionalProfile) blocks.push(`Additional supplied context:\n${additionalProfile}`);
+  return blocks.join("\n\n");
 }

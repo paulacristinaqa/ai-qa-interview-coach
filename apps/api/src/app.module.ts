@@ -35,6 +35,8 @@ import { LearningController } from "./learning/learning.controller";
 import { LearningService } from "./learning/learning.service";
 import { QuestionsController } from "./questions/questions.controller";
 import { QuestionsService } from "./questions/questions.service";
+import { ProfessionalEvidenceController } from "./professional-evidence/professional-evidence.controller";
+import { ProfessionalEvidenceService } from "./professional-evidence/professional-evidence.service";
 import { TechnicalLabController } from "./technical-lab/technical-lab.controller";
 import { TechnicalLabService } from "./technical-lab/technical-lab.service";
 
@@ -56,7 +58,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     JobAnalysisController,
     ApplicationsController,
     CareerDocumentsController,
-    CompaniesController
+    CompaniesController,
+    ProfessionalEvidenceController
   ],
   providers: [
     PrismaService,
@@ -79,7 +82,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     JobAnalysisService,
     ApplicationsService,
     CareerDocumentsService,
-    CompaniesService
+    CompaniesService,
+    ProfessionalEvidenceService
   ]
 })
 export class AppModule {}
