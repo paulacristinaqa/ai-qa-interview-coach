@@ -459,6 +459,121 @@ paths:
           description: Document deleted
         "404":
           description: Document not found for the authenticated user
+  /companies:
+    get:
+      summary: List manually researched companies
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: favorite, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Companies owned by the authenticated user
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Company" } }
+    post:
+      summary: Create a company and optionally associate owned opportunities
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateCompany" }
+      responses:
+        "201":
+          description: Company created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400":
+          description: Invalid input, duplicate name or opportunity ownership mismatch
+  /companies/{companyId}:
+    parameters:
+      - { $ref: "#/components/parameters/CompanyId" }
+    get:
+      summary: Get company research, contacts and associated opportunities
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Company detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "404": { description: Company not found for the authenticated user }
+    patch:
+      summary: Update company research and explicit opportunity associations
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateCompany" }
+      responses:
+        "200":
+          description: Company updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { description: Invalid input or opportunity ownership mismatch }
+        "404": { description: Company not found for the authenticated user }
+    delete:
+      summary: Delete a company and its contacts while preserving associated opportunities
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Company deleted and opportunities disassociated }
+        "404": { description: Company not found for the authenticated user }
+  /companies/{companyId}/contacts:
+    parameters:
+      - { $ref: "#/components/parameters/CompanyId" }
+    post:
+      summary: Add a manual recruiting contact to an owned company
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateCompanyContact" }
+      responses:
+        "201":
+          description: Contact created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyContact" }
+        "404": { description: Company not found for the authenticated user }
+  /companies/{companyId}/contacts/{contactId}:
+    parameters:
+      - { $ref: "#/components/parameters/CompanyId" }
+      - { $ref: "#/components/parameters/ContactId" }
+    patch:
+      summary: Update a company contact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateCompanyContact" }
+      responses:
+        "200":
+          description: Contact updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CompanyContact" }
+        "404": { description: Contact not found inside the owned company }
+    delete:
+      summary: Remove a company contact
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Contact removed }
+        "404": { description: Contact not found inside the owned company }
 components:
   securitySchemes:
     bearerAuth:
@@ -492,6 +607,16 @@ components:
       schema:
         type: string
         format: uuid
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ContactId:
+      name: contactId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
   schemas:
     LoginRequest:
       type: object
@@ -746,6 +871,7 @@ components:
                   properties:
                     id: { type: string, format: uuid }
                 - type: "null"
+            companyProfileId: { type: [string, "null"], format: uuid }
     JobAnalysis:
       type: object
       required: [id, opportunityId, technicalSummary, responsibilities, requiredRequirements, preferredRequirements, technologies, softSkills, estimatedSeniority, profileFit, gaps, preparationPlan, providerName, modelName, promptTemplateVersion, createdAt, updatedAt]
@@ -849,3 +975,82 @@ components:
         opportunity: { $ref: "#/components/schemas/JobOpportunity" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    CreateCompany:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        website: { type: [string, "null"], format: uri }
+        linkedinUrl: { type: [string, "null"], format: uri }
+        country: { type: [string, "null"], maxLength: 120 }
+        city: { type: [string, "null"], maxLength: 120 }
+        industry: { type: [string, "null"], maxLength: 160 }
+        size: { type: [string, "null"], maxLength: 80 }
+        workCulture: { type: [string, "null"], maxLength: 5000 }
+        notes: { type: [string, "null"], maxLength: 10000 }
+        favorite: { type: boolean, default: false }
+        opportunityIds: { type: array, uniqueItems: true, items: { type: string, format: uuid } }
+    UpdateCompany:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        website: { type: [string, "null"], format: uri }
+        linkedinUrl: { type: [string, "null"], format: uri }
+        country: { type: [string, "null"], maxLength: 120 }
+        city: { type: [string, "null"], maxLength: 120 }
+        industry: { type: [string, "null"], maxLength: 160 }
+        size: { type: [string, "null"], maxLength: 80 }
+        workCulture: { type: [string, "null"], maxLength: 5000 }
+        notes: { type: [string, "null"], maxLength: 10000 }
+        favorite: { type: boolean }
+        opportunityIds: { type: array, uniqueItems: true, items: { type: string, format: uuid } }
+    CreateCompanyContact:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        role: { type: [string, "null"], maxLength: 200 }
+        email: { type: [string, "null"], format: email }
+        linkedinUrl: { type: [string, "null"], format: uri }
+        notes: { type: [string, "null"], maxLength: 5000 }
+        lastContactAt: { type: [string, "null"], format: date-time }
+    UpdateCompanyContact:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        role: { type: [string, "null"], maxLength: 200 }
+        email: { type: [string, "null"], format: email }
+        linkedinUrl: { type: [string, "null"], format: uri }
+        notes: { type: [string, "null"], maxLength: 5000 }
+        lastContactAt: { type: [string, "null"], format: date-time }
+    CompanyContact:
+      allOf:
+        - $ref: "#/components/schemas/CreateCompanyContact"
+        - type: object
+          required: [id, companyId, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            companyId: { type: string, format: uuid }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    Company:
+      allOf:
+        - $ref: "#/components/schemas/CreateCompany"
+        - type: object
+          required: [id, name, favorite, contacts, opportunities, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            contacts: { type: array, items: { $ref: "#/components/schemas/CompanyContact" } }
+            opportunities: { type: array, items: { $ref: "#/components/schemas/CompanyOpportunitySummary" } }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    CompanyOpportunitySummary:
+      type: object
+      required: [id, title, company, status, seniority, country]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        company: { type: string }
+        status: { $ref: "#/components/schemas/JobStatus" }
+        seniority: { type: string }
+        country: { type: string }

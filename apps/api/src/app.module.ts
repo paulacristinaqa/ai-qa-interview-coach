@@ -8,6 +8,8 @@ import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
 import { CareerDocumentsController } from "./career-documents/career-documents.controller";
 import { CareerDocumentsService } from "./career-documents/career-documents.service";
+import { CompaniesController } from "./companies/companies.controller";
+import { CompaniesService } from "./companies/companies.service";
 import { CriController } from "./cri/cri.controller";
 import { CriService } from "./cri/cri.service";
 import { DashboardController } from "./dashboard/dashboard.controller";
@@ -53,7 +55,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     JobsController,
     JobAnalysisController,
     ApplicationsController,
-    CareerDocumentsController
+    CareerDocumentsController,
+    CompaniesController
   ],
   providers: [
     PrismaService,
@@ -75,7 +78,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     JobsService,
     JobAnalysisService,
     ApplicationsService,
-    CareerDocumentsService
+    CareerDocumentsService,
+    CompaniesService
   ]
 })
 export class AppModule {}

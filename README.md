@@ -164,7 +164,7 @@ Depois do login, a navegacao lateral organiza o MVP por dominio:
 | `/settings` | Sessao local e logout | Operacional |
 | `/career/jobs` | Job Intelligence Manual | Operacional |
 | `/career/applications` | Pipeline manual de candidaturas | Operacional |
-| `/career/companies` | Companies | Rota preparada, sem funcionalidade nesta etapa |
+| `/career/companies` | Empresas-alvo, vagas e contatos | Operacional |
 | `/career/documents` | CV, carta e matriz direcionados por vaga | Operacional |
 
 A rota `/` redireciona para `/dashboard`.
@@ -373,6 +373,23 @@ Endpoints:
 - `POST /api/v1/career-documents/generate`
 - `DELETE /api/v1/career-documents/:documentId`
 
+### Companies
+
+Permite organizar manualmente empresas-alvo em `/career/companies`, com nome, website, LinkedIn, local, setor, porte, pesquisa sobre cultura, observacoes e favorito. Cada empresa pode ser associada explicitamente a vagas existentes e manter contatos de recrutamento com funcao, e-mail, LinkedIn, data do ultimo contato e notas.
+
+A associacao nao altera o nome original registrado na vaga nem sincroniza status automaticamente. Excluir uma empresa remove seus contatos e desassocia as vagas, mas preserva oportunidades, candidaturas, analises e documentos. O modulo nao executa scraping, envio de e-mail, descoberta de contatos ou integracoes externas.
+
+Endpoints:
+
+- `GET /api/v1/companies`
+- `GET /api/v1/companies/:companyId`
+- `POST /api/v1/companies`
+- `PATCH /api/v1/companies/:companyId`
+- `DELETE /api/v1/companies/:companyId`
+- `POST /api/v1/companies/:companyId/contacts`
+- `PATCH /api/v1/companies/:companyId/contacts/:contactId`
+- `DELETE /api/v1/companies/:companyId/contacts/:contactId`
+
 ### Developer Diary
 
 Permite registrar decisoes, ADR simples, changelog, future improvements, contexto, proximos passos e exportar o diario em Markdown. Tambem sugere entradas automaticamente com base nas evidencias recentes.
@@ -414,12 +431,16 @@ Endpoints:
 25. Abrir Career Intelligence > Applications e adicionar a vaga ao pipeline.
 26. Alterar a etapa para entrevista, registrar uma proxima acao e conferir os contadores.
 27. Remover o acompanhamento e confirmar que a oportunidade continua disponivel em Jobs.
-28. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
-29. Informar ao menos 40 caracteres de evidencias profissionais verdadeiras, selecionar Portugues e gerar o pacote.
-30. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
-31. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
-32. Excluir um pacote e confirmar que a vaga continua disponivel.
-33. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+28. Abrir Career Intelligence > Companies, cadastrar uma empresa e associar a vaga de teste.
+29. Adicionar um contato, editar suas observacoes e conferir busca e filtro de favoritas.
+30. Excluir o contato e confirmar que a empresa e a vaga continuam disponiveis.
+31. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
+32. Informar ao menos 40 caracteres de evidencias profissionais verdadeiras, selecionar Portugues e gerar o pacote.
+33. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
+34. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
+35. Excluir um pacote e confirmar que a vaga continua disponivel.
+36. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
+37. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
@@ -444,7 +465,7 @@ Endpoints:
 
 O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
-A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem os fluxos de vaga, treino direcionado, candidatura e documentos de carreira.
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, treino direcionado, candidaturas e documentos de carreira.
 
 Para smoke E2E local:
 

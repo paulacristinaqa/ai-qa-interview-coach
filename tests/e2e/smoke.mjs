@@ -92,6 +92,29 @@ const opportunity = await request("/job-opportunities", {
     originalDescription: "Own API quality, automation strategy and release evidence."
   })
 });
+const company = await request("/companies", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    name: `E2E Example Labs ${Date.now()}`,
+    website: "https://example.com",
+    country: "Portugal",
+    industry: "Technology",
+    favorite: true,
+    opportunityIds: [opportunity.id]
+  })
+});
+assert.ok(company.opportunities.some((item) => item.id === opportunity.id), "company should explicitly connect the owned opportunity");
+
+const companyContact = await request(`/companies/${company.id}/contacts`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({ name: "E2E Recruiter", role: "Technical Recruiter", email: "recruiter@example.com" })
+});
+assert.equal(companyContact.companyId, company.id);
+const companies = await request("/companies?search=E2E&favorite=true", { headers });
+assert.ok(companies.some((item) => item.id === company.id), "company should be visible with search and favorite filters");
+
 const targetedGrill = await request("/grill-me/sessions", {
   method: "POST",
   headers,
@@ -155,7 +178,10 @@ assert.ok(careerDocument.fitMatrix.length >= 1, "career pack should contain a fi
 const careerDocuments = await request(`/career-documents?opportunityId=${opportunity.id}`, { headers });
 assert.ok(careerDocuments.some((item) => item.id === careerDocument.id), "career pack should be persisted for the vacancy");
 await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
+await request(`/companies/${company.id}`, { method: "DELETE", headers });
+const opportunityAfterCompanyRemoval = await request(`/job-opportunities/${opportunity.id}`, { headers });
+assert.equal(opportunityAfterCompanyRemoval.id, opportunity.id, "removing a company should preserve its opportunity");
 await request(`/job-opportunities/${opportunity.id}`, { method: "DELETE", headers });
 
-console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary, targeted Grill Me, Job Applications and Career Documents`);
+console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary and Career Intelligence modules`);
 import assert from "node:assert/strict";
