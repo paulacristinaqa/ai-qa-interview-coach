@@ -116,6 +116,7 @@ export interface JobOpportunity {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  companyProfileId?: string | null;
   analysis?: JobAnalysis | null;
   application?: { id: string } | null;
 }
@@ -172,4 +173,35 @@ export interface CareerDocument {
   createdAt: string;
   updatedAt: string;
   opportunity: Pick<JobOpportunity, "id" | "title" | "company" | "country" | "city" | "workModel" | "seniority" | "language">;
+}
+
+export interface CompanyContact {
+  id: string;
+  companyId: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  linkedinUrl: string | null;
+  notes: string | null;
+  lastContactAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  website: string | null;
+  linkedinUrl: string | null;
+  country: string | null;
+  city: string | null;
+  industry: string | null;
+  size: string | null;
+  workCulture: string | null;
+  notes: string | null;
+  favorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+  contacts: CompanyContact[];
+  opportunities: Array<Pick<JobOpportunity, "id" | "title" | "company" | "status" | "seniority" | "country">>;
 }

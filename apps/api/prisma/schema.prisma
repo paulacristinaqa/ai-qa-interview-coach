@@ -26,6 +26,8 @@ model User {
   jobOpportunities  JobOpportunity[]
   jobApplications   JobApplication[]
   careerDocuments   CareerDocument[]
+  companies         Company[]
+  companyContacts   CompanyContact[]
 
   @@map("users")
 }
@@ -47,15 +49,64 @@ model JobOpportunity {
   notes               String?
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
+  companyProfileId    String?  @map("company_profile_id")
 
-  user        User            @relation(fields: [userId], references: [id])
-  analysis    JobAnalysis?
-  application JobApplication?
-  documents   CareerDocument[]
+  user           User            @relation(fields: [userId], references: [id])
+  companyProfile Company?        @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
+  analysis       JobAnalysis?
+  application    JobApplication?
+  documents      CareerDocument[]
 
   @@index([userId, status])
   @@index([userId, workModel])
+  @@index([companyProfileId])
   @@map("job_opportunities")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  website     String?
+  linkedinUrl String?  @map("linkedin_url")
+  country     String?
+  city        String?
+  industry    String?
+  size        String?
+  workCulture String?  @map("work_culture")
+  notes       String?
+  favorite    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user          User             @relation(fields: [userId], references: [id])
+  contacts      CompanyContact[]
+  opportunities JobOpportunity[]
+
+  @@unique([userId, name])
+  @@index([userId, favorite])
+  @@map("companies")
+}
+
+model CompanyContact {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  companyId     String    @map("company_id")
+  name          String
+  role          String?
+  email         String?
+  linkedinUrl   String?   @map("linkedin_url")
+  notes         String?
+  lastContactAt DateTime? @map("last_contact_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, updatedAt])
+  @@index([userId, lastContactAt])
+  @@map("company_contacts")
 }
 
 model JobApplication {

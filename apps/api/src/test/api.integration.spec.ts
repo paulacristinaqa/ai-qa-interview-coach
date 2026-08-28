@@ -6,6 +6,8 @@ import { AuthController } from "../auth/auth.controller";
 import { AuthService } from "../auth/auth.service";
 import { CareerDocumentsController } from "../career-documents/career-documents.controller";
 import { CareerDocumentsService } from "../career-documents/career-documents.service";
+import { CompaniesController } from "../companies/companies.controller";
+import { CompaniesService } from "../companies/companies.service";
 import { ApplicationsController } from "../applications/applications.controller";
 import { ApplicationsService } from "../applications/applications.service";
 import { CriController } from "../cri/cri.controller";
@@ -99,6 +101,16 @@ describe("main API endpoints", () => {
     })),
     remove: vi.fn().mockResolvedValue(undefined)
   };
+  const companiesService = {
+    list: vi.fn().mockResolvedValue([{ id: "company-1", name: "Example Labs", contacts: [], opportunities: [] }]),
+    get: vi.fn().mockResolvedValue({ id: "company-1", name: "Example Labs", contacts: [], opportunities: [] }),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "company-1", userId, ...body, contacts: [], opportunities: [] })),
+    update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
+    remove: vi.fn().mockResolvedValue(undefined),
+    createContact: vi.fn().mockImplementation((userId, companyId, body) => ({ id: "contact-1", userId, companyId, ...body })),
+    updateContact: vi.fn(),
+    removeContact: vi.fn().mockResolvedValue(undefined)
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -114,6 +126,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService], JobAnalysisController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, ApplicationsService], ApplicationsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CareerDocumentsService], CareerDocumentsController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, CompaniesService], CompaniesController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -129,7 +142,8 @@ describe("main API endpoints", () => {
         JobsController,
         JobAnalysisController,
         ApplicationsController,
-        CareerDocumentsController
+        CareerDocumentsController,
+        CompaniesController
       ],
       providers: [
         AuthService,
@@ -144,7 +158,8 @@ describe("main API endpoints", () => {
         { provide: JobsService, useValue: jobsService },
         { provide: JobAnalysisService, useValue: jobAnalysisService },
         { provide: ApplicationsService, useValue: applicationsService },
-        { provide: CareerDocumentsService, useValue: careerDocumentsService }
+        { provide: CareerDocumentsService, useValue: careerDocumentsService },
+        { provide: CompaniesService, useValue: companiesService }
       ]
     }).compile();
 
@@ -359,5 +374,27 @@ describe("main API endpoints", () => {
     expect([generated.statusCode, listed.statusCode]).toEqual([201, 200]);
     expect(generated.json()).toMatchObject({ id: "document-1", userId: "single-user", language: "en" });
     expect(careerDocumentsService.generate).toHaveBeenCalledWith("single-user", expect.objectContaining({ opportunityId: "job-1" }));
+  });
+
+  it("routes authenticated company, opportunity association and contact operations", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/companies",
+      headers: { authorization },
+      payload: { name: "Example Labs", favorite: true, opportunityIds: ["job-1"] }
+    });
+    const listed = await app.inject({ method: "GET", url: "/api/v1/companies?search=Example&favorite=true", headers: { authorization } });
+    const contact = await app.inject({
+      method: "POST",
+      url: "/api/v1/companies/company-1/contacts",
+      headers: { authorization },
+      payload: { name: "Ana Recruiter", email: "ana@example.com" }
+    });
+    const removed = await app.inject({ method: "DELETE", url: "/api/v1/companies/company-1", headers: { authorization } });
+
+    expect([created.statusCode, listed.statusCode, contact.statusCode, removed.statusCode]).toEqual([201, 200, 201, 204]);
+    expect(created.json()).toMatchObject({ id: "company-1", userId: "single-user", name: "Example Labs" });
+    expect(contact.json()).toMatchObject({ id: "contact-1", companyId: "company-1", userId: "single-user" });
+    expect(companiesService.list).toHaveBeenCalledWith("single-user", { search: "Example", favorite: true });
   });
 });
