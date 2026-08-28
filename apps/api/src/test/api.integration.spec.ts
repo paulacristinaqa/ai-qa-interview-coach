@@ -8,6 +8,8 @@ import { CareerDocumentsController } from "../career-documents/career-documents.
 import { CareerDocumentsService } from "../career-documents/career-documents.service";
 import { CompaniesController } from "../companies/companies.controller";
 import { CompaniesService } from "../companies/companies.service";
+import { ProfessionalEvidenceController } from "../professional-evidence/professional-evidence.controller";
+import { ProfessionalEvidenceService } from "../professional-evidence/professional-evidence.service";
 import { ApplicationsController } from "../applications/applications.controller";
 import { ApplicationsService } from "../applications/applications.service";
 import { CriController } from "../cri/cri.controller";
@@ -111,6 +113,13 @@ describe("main API endpoints", () => {
     updateContact: vi.fn(),
     removeContact: vi.fn().mockResolvedValue(undefined)
   };
+  const professionalEvidenceService = {
+    list: vi.fn().mockResolvedValue([{ id: "evidence-1", type: "project", title: "API automation" }]),
+    get: vi.fn(),
+    create: vi.fn().mockImplementation((userId, body) => ({ id: "evidence-1", userId, ...body })),
+    update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
+    remove: vi.fn().mockResolvedValue(undefined)
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -127,6 +136,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, ApplicationsService], ApplicationsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CareerDocumentsService], CareerDocumentsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CompaniesService], CompaniesController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, ProfessionalEvidenceService], ProfessionalEvidenceController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -143,7 +153,8 @@ describe("main API endpoints", () => {
         JobAnalysisController,
         ApplicationsController,
         CareerDocumentsController,
-        CompaniesController
+        CompaniesController,
+        ProfessionalEvidenceController
       ],
       providers: [
         AuthService,
@@ -159,7 +170,8 @@ describe("main API endpoints", () => {
         { provide: JobAnalysisService, useValue: jobAnalysisService },
         { provide: ApplicationsService, useValue: applicationsService },
         { provide: CareerDocumentsService, useValue: careerDocumentsService },
-        { provide: CompaniesService, useValue: companiesService }
+        { provide: CompaniesService, useValue: companiesService },
+        { provide: ProfessionalEvidenceService, useValue: professionalEvidenceService }
       ]
     }).compile();
 
@@ -396,5 +408,21 @@ describe("main API endpoints", () => {
     expect(created.json()).toMatchObject({ id: "company-1", userId: "single-user", name: "Example Labs" });
     expect(contact.json()).toMatchObject({ id: "contact-1", companyId: "company-1", userId: "single-user" });
     expect(companiesService.list).toHaveBeenCalledWith("single-user", { search: "Example", favorite: true });
+  });
+
+  it("routes authenticated professional evidence CRUD and filters", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/v1/professional-evidence",
+      headers: { authorization },
+      payload: { type: "project", title: "API automation", description: "Built traceable API regression coverage.", skills: ["Playwright"] }
+    });
+    const listed = await app.inject({ method: "GET", url: "/api/v1/professional-evidence?search=API&type=project&favorite=true", headers: { authorization } });
+    const updated = await app.inject({ method: "PATCH", url: "/api/v1/professional-evidence/evidence-1", headers: { authorization }, payload: { favorite: true } });
+    const removed = await app.inject({ method: "DELETE", url: "/api/v1/professional-evidence/evidence-1", headers: { authorization } });
+
+    expect([created.statusCode, listed.statusCode, updated.statusCode, removed.statusCode]).toEqual([201, 200, 200, 204]);
+    expect(created.json()).toMatchObject({ id: "evidence-1", userId: "single-user", type: "project" });
+    expect(professionalEvidenceService.list).toHaveBeenCalledWith("single-user", { search: "API", type: "project", favorite: true });
   });
 });

@@ -44,6 +44,7 @@ export function CareerDocumentDetail({ document, onDownload, onDelete }: {
         </div>
       </div>
       <p className="helper-text">Rascunho gerado a partir das evidências fornecidas. Revise todo o conteúdo antes de enviar.</p>
+      <p className="helper-text">Evidências reutilizáveis vinculadas: {document.sourceEvidenceIds.length}</p>
       <div className="document-grid">
         <article><h3>CV direcionado</h3><pre>{document.cvMarkdown}</pre></article>
         <article><h3>Carta de apresentação</h3><pre>{document.coverLetter}</pre></article>

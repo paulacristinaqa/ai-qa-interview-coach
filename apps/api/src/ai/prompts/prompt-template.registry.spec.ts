@@ -55,8 +55,9 @@ describe("prompt template registry", () => {
   it("limits the reduced Career document pack to Portuguese or English", () => {
     const template = getPromptTemplate("career.document-pack");
 
-    expect(template.version).toBe("2.0.0");
+    expect(template.version).toBe("2.1.0");
     expect(template.expectedInputs).toContain("language");
+    expect(template.expectedInputs).toContain("evidenceCatalog");
     expect(template.systemInstruction).toContain("Brazilian Portuguese or English");
     expect(Object.keys((template.outputSchema as { properties: Record<string, unknown> }).properties)).toEqual([
       "cvMarkdown", "coverLetter", "fitMatrix", "unsupportedClaims"

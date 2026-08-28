@@ -167,12 +167,29 @@ export interface CareerDocument {
   cvMarkdown: string;
   coverLetter: string;
   fitMatrix: Array<{ requirement: string; evidence: string; status: FitStatus }>;
+  sourceEvidenceIds: string[];
   providerName: string;
   modelName: string;
   promptTemplateVersion: string;
   createdAt: string;
   updatedAt: string;
   opportunity: Pick<JobOpportunity, "id" | "title" | "company" | "country" | "city" | "workModel" | "seniority" | "language">;
+}
+
+export type EvidenceType = "experience" | "project" | "achievement" | "skill" | "certification" | "education" | "language";
+
+export interface ProfessionalEvidence {
+  id: string;
+  type: EvidenceType;
+  title: string;
+  description: string;
+  skills: string[];
+  outcome: string | null;
+  sourceUrl: string | null;
+  occurredAt: string | null;
+  favorite: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CompanyContact {

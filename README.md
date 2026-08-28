@@ -165,6 +165,7 @@ Depois do login, a navegacao lateral organiza o MVP por dominio:
 | `/career/jobs` | Job Intelligence Manual | Operacional |
 | `/career/applications` | Pipeline manual de candidaturas | Operacional |
 | `/career/companies` | Empresas-alvo, vagas e contatos | Operacional |
+| `/career/evidence` | Biblioteca de evidencias profissionais | Operacional |
 | `/career/documents` | CV, carta e matriz direcionados por vaga | Operacional |
 
 A rota `/` redireciona para `/dashboard`.
@@ -360,11 +361,11 @@ Endpoints:
 
 ### Documents direcionados por vaga
 
-Em `/career/documents`, permite gerar e salvar um pacote por vaga e idioma contendo CV em Markdown, carta de apresentacao e matriz de aderencia requisito por requisito. Os idiomas suportados sao somente Portugues (`pt-BR`) e Ingles (`en`). Gerar novamente para a mesma vaga e idioma atualiza o pacote existente; os dois idiomas podem coexistir.
+Em `/career/documents`, permite gerar e salvar um pacote por vaga e idioma contendo CV em Markdown, carta de apresentacao e matriz de aderencia requisito por requisito. Os idiomas suportados sao somente Portugues (`pt-BR`) e Ingles (`en`). Gerar novamente para a mesma vaga e idioma atualiza o pacote existente; os dois idiomas podem coexistir. O formulario aceita evidencias reutilizaveis da biblioteca e contexto manual adicional, mantendo compatibilidade com o fluxo anterior.
 
 A usuaria informa manualmente suas experiencias, competencias, projetos e resultados verdadeiros. O gerador pode reorganizar e adaptar a redacao para a vaga, mas nao deve criar empregadores, datas, resultados, ferramentas, formacao ou certificacoes ausentes. Requisitos sem evidencia ficam marcados como lacuna. Nao cole senhas, documentos pessoais nem outros dados sensiveis, e revise sempre o rascunho antes de uma candidatura.
 
-O modo padrao `AI_PROVIDER=mock` funciona localmente e sem custo. O Ollama e opcional e usa o mesmo template versionado `career.document-pack@2.0.0`. A resposta passa por schema JSON e por uma verificacao adicional de cobertura dos requisitos e fundamentacao das evidencias antes de ser persistida. O pacote pode ser baixado em um unico arquivo Markdown.
+O modo padrao `AI_PROVIDER=mock` funciona localmente e sem custo. O Ollama e opcional e usa o template versionado `career.document-pack@2.1.0`, que aceita o catalogo reutilizavel de evidencias. A resposta passa por schema JSON e por uma verificacao adicional de cobertura dos requisitos e fundamentacao das evidencias antes de ser persistida. O pacote pode ser baixado em um unico arquivo Markdown.
 
 Endpoints:
 
@@ -372,6 +373,20 @@ Endpoints:
 - `GET /api/v1/career-documents/:documentId`
 - `POST /api/v1/career-documents/generate`
 - `DELETE /api/v1/career-documents/:documentId`
+
+### Evidence Library
+
+Em `/career/evidence`, registra um catalogo pessoal de fatos profissionais reutilizaveis: experiencias, projetos, resultados, competencias, certificacoes, formacao e idiomas. Cada item inclui titulo, descricao factual, competencias, resultado opcional, fonte, data e favorito.
+
+Career Documents pode selecionar ate 30 itens do catalogo. A API valida que todos pertencem ao usuario autenticado, monta um snapshot textual e grava `sourceEvidenceIds` no pacote. Excluir uma evidencia nao altera CVs ou cartas ja gerados: o snapshot historico permanece no documento. Nao devem ser salvos segredos, documentos pessoais, dados confidenciais de empresas ou afirmacoes que nao possam ser defendidas em entrevista.
+
+Endpoints:
+
+- `GET /api/v1/professional-evidence`
+- `GET /api/v1/professional-evidence/:evidenceId`
+- `POST /api/v1/professional-evidence`
+- `PATCH /api/v1/professional-evidence/:evidenceId`
+- `DELETE /api/v1/professional-evidence/:evidenceId`
 
 ### Companies
 
@@ -434,13 +449,16 @@ Endpoints:
 28. Abrir Career Intelligence > Companies, cadastrar uma empresa e associar a vaga de teste.
 29. Adicionar um contato, editar suas observacoes e conferir busca e filtro de favoritas.
 30. Excluir o contato e confirmar que a empresa e a vaga continuam disponiveis.
-31. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
-32. Informar ao menos 40 caracteres de evidencias profissionais verdadeiras, selecionar Portugues e gerar o pacote.
-33. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
-34. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
-35. Excluir um pacote e confirmar que a vaga continua disponivel.
-36. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
-37. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+31. Abrir Career Intelligence > Evidence e cadastrar um projeto verdadeiro com competencias e resultado.
+32. Testar busca, tipo e favoritas; editar a evidencia e confirmar a atualizacao.
+33. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
+34. Selecionar a evidencia salva, escolher Portugues e gerar sem precisar repetir todo o perfil.
+35. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
+36. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
+37. Excluir a evidencia e confirmar que o documento gerado ainda preserva seu snapshot.
+38. Excluir um pacote e confirmar que a vaga continua disponivel.
+39. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
+40. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
@@ -465,7 +483,7 @@ Endpoints:
 
 O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
-A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, treino direcionado, candidaturas e documentos de carreira.
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, treino direcionado, candidaturas e documentos de carreira.
 
 Para smoke E2E local:
 

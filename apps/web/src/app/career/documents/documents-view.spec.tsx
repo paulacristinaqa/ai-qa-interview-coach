@@ -15,9 +15,10 @@ const document: CareerDocument = {
     { requirement: "Testes de API", evidence: "Cinco anos testando APIs.", status: "supported" },
     { requirement: "Docker", evidence: "Nenhuma evidência informada.", status: "gap" }
   ],
+  sourceEvidenceIds: ["evidence-1"],
   providerName: "mock",
   modelName: "deterministic",
-  promptTemplateVersion: "career.document-pack@2.0.0",
+  promptTemplateVersion: "career.document-pack@2.1.0",
   createdAt: "2026-08-28T00:00:00.000Z",
   updatedAt: "2026-08-28T00:00:00.000Z",
   opportunity: {
@@ -42,7 +43,7 @@ describe("Career Documents frontend", () => {
     expect(markup).toContain("Testes de API");
     expect(markup).toContain("Comprovado");
     expect(markup).toContain("Lacuna");
-    expect(markup).toContain("career.document-pack@2.0.0");
+    expect(markup).toContain("career.document-pack@2.1.0");
   });
 
   it("exports all sections as Markdown", () => {

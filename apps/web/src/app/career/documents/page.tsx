@@ -2,9 +2,11 @@
 
 import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../../../components/auth-provider";
 import { PageHeader, StatusMessage } from "../../../components/page";
-import type { CareerDocument, CareerDocumentLanguage, JobOpportunity } from "../../../lib/types";
+import type { CareerDocument, CareerDocumentLanguage, JobOpportunity, ProfessionalEvidence } from "../../../lib/types";
+import { evidenceTypeLabels } from "../evidence/evidence-view";
 import { buildDocumentExport, CareerDocumentCard, CareerDocumentDetail, languageLabels } from "./documents-view";
 
 export default function DocumentsPage() {
@@ -17,6 +19,8 @@ function DocumentsContent() {
   const requestedOpportunityId = searchParams.get("opportunityId") ?? "";
   const [opportunities, setOpportunities] = useState<JobOpportunity[]>([]);
   const [documents, setDocuments] = useState<CareerDocument[]>([]);
+  const [evidence, setEvidence] = useState<ProfessionalEvidence[]>([]);
+  const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [opportunityId, setOpportunityId] = useState(requestedOpportunityId);
   const [language, setLanguage] = useState<CareerDocumentLanguage>("pt-BR");
@@ -26,12 +30,14 @@ function DocumentsContent() {
 
   const load = useCallback(async () => {
     try {
-      const [jobData, documentData] = await Promise.all([
+      const [jobData, documentData, evidenceData] = await Promise.all([
         api<JobOpportunity[]>("/job-opportunities"),
-        api<CareerDocument[]>("/career-documents")
+        api<CareerDocument[]>("/career-documents"),
+        api<ProfessionalEvidence[]>("/professional-evidence")
       ]);
       setOpportunities(jobData);
       setDocuments(documentData);
+      setEvidence(evidenceData);
       setSelectedId((current) => current && documentData.some((item) => item.id === current) ? current : documentData[0]?.id ?? null);
       setOpportunityId((current) => current || requestedOpportunityId || jobData[0]?.id || "");
       setMessage("");
@@ -44,13 +50,17 @@ function DocumentsContent() {
 
   const selected = documents.find((document) => document.id === selectedId) ?? null;
 
+  function toggleEvidence(id: string) {
+    setEvidenceIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
   async function generate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsGenerating(true);
     try {
       const generated = await api<CareerDocument>("/career-documents/generate", {
         method: "POST",
-        body: JSON.stringify({ opportunityId, language, candidateProfile })
+        body: JSON.stringify({ opportunityId, language, candidateProfile, evidenceIds })
       });
       await load();
       setSelectedId(generated.id);
@@ -108,19 +118,21 @@ function DocumentsContent() {
               </select>
             </label>
           </div>
-          <label>Evidências profissionais
+          <fieldset className="opportunity-picker evidence-picker"><legend>Biblioteca de evidências</legend>
+            {evidence.map((item) => <label className="checkbox-label" key={item.id}><input type="checkbox" checked={evidenceIds.includes(item.id)} onChange={() => toggleEvidence(item.id)} /><span><strong>{item.title}</strong><small>{evidenceTypeLabels[item.type]} · {item.skills.join(", ") || "sem competências marcadas"}</small></span></label>)}
+            {evidence.length === 0 ? <p className="helper-text">Sua biblioteca está vazia. <Link className="text-link" href="/career/evidence">Cadastrar evidências</Link></p> : null}
+          </fieldset>
+          <label>Contexto profissional adicional (opcional)
             <textarea
-              required
-              minLength={40}
               maxLength={20000}
-              rows={10}
-              placeholder="Cole apenas experiências, competências, projetos e resultados verdadeiros que podem constar no CV."
+              rows={6}
+              placeholder="Acrescente somente fatos verdadeiros que ainda não estejam na biblioteca. Sem evidências selecionadas, informe ao menos 40 caracteres."
               value={candidateProfile}
               onChange={(event) => setCandidateProfile(event.target.value)}
             />
           </label>
           <p className="helper-text">Não inclua senhas, documentos pessoais ou dados sensíveis. O sistema não inventa competências ausentes: elas aparecem como lacunas.</p>
-          <button type="submit" disabled={isGenerating || !opportunityId || candidateProfile.trim().length < 40}>{isGenerating ? "Gerando..." : "Gerar documentos"}</button>
+          <button type="submit" disabled={isGenerating || !opportunityId || (evidenceIds.length === 0 && candidateProfile.trim().length < 40)}>{isGenerating ? "Gerando..." : "Gerar documentos"}</button>
         </form>
       </section>
 
