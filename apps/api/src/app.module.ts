@@ -6,6 +6,8 @@ import { MockAiProvider } from "./ai/mock-ai.provider";
 import { OllamaAiProvider } from "./ai/ollama-ai.provider";
 import { AuthController } from "./auth/auth.controller";
 import { AuthService } from "./auth/auth.service";
+import { CareerDocumentsController } from "./career-documents/career-documents.controller";
+import { CareerDocumentsService } from "./career-documents/career-documents.service";
 import { CriController } from "./cri/cri.controller";
 import { CriService } from "./cri/cri.service";
 import { DashboardController } from "./dashboard/dashboard.controller";
@@ -50,7 +52,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     DiaryController,
     JobsController,
     JobAnalysisController,
-    ApplicationsController
+    ApplicationsController,
+    CareerDocumentsController
   ],
   providers: [
     PrismaService,
@@ -71,7 +74,8 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     DiaryService,
     JobsService,
     JobAnalysisService,
-    ApplicationsService
+    ApplicationsService,
+    CareerDocumentsService
   ]
 })
 export class AppModule {}

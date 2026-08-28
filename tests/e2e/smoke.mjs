@@ -137,7 +137,25 @@ assert.equal(advancedApplication.status, "interview");
 await request(`/job-applications/${application.id}`, { method: "DELETE", headers });
 const preservedOpportunity = await request(`/job-opportunities/${opportunity.id}`, { headers });
 assert.equal(preservedOpportunity.id, opportunity.id, "removing an application should preserve its opportunity");
+
+const careerDocument = await request("/career-documents/generate", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    opportunityId: opportunity.id,
+    language: "en",
+    candidateProfile: "I own API quality, automation strategy and release evidence through five years of QA project work."
+  })
+});
+assert.equal(careerDocument.language, "en");
+assert.ok(careerDocument.cvMarkdown.includes("Tailored professional CV"), "career pack should contain the targeted CV");
+assert.ok(careerDocument.coverLetter, "career pack should contain a cover letter");
+assert.ok(careerDocument.fitMatrix.length >= 1, "career pack should contain a fit matrix");
+
+const careerDocuments = await request(`/career-documents?opportunityId=${opportunity.id}`, { headers });
+assert.ok(careerDocuments.some((item) => item.id === careerDocument.id), "career pack should be persisted for the vacancy");
+await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
 await request(`/job-opportunities/${opportunity.id}`, { method: "DELETE", headers });
 
-console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary, targeted Grill Me and Job Applications`);
+console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary, targeted Grill Me, Job Applications and Career Documents`);
 import assert from "node:assert/strict";

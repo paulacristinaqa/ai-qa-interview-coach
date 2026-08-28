@@ -4,6 +4,8 @@ import { Test } from "@nestjs/testing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { AuthController } from "../auth/auth.controller";
 import { AuthService } from "../auth/auth.service";
+import { CareerDocumentsController } from "../career-documents/career-documents.controller";
+import { CareerDocumentsService } from "../career-documents/career-documents.service";
 import { ApplicationsController } from "../applications/applications.controller";
 import { ApplicationsService } from "../applications/applications.service";
 import { CriController } from "../cri/cri.controller";
@@ -89,6 +91,14 @@ describe("main API endpoints", () => {
     update: vi.fn().mockImplementation((_userId, id, body) => ({ id, ...body })),
     remove: vi.fn().mockResolvedValue(undefined)
   };
+  const careerDocumentsService = {
+    list: vi.fn().mockResolvedValue([{ id: "document-1", language: "en", opportunity: { id: "job-1" } }]),
+    get: vi.fn(),
+    generate: vi.fn().mockImplementation((userId, body) => ({
+      id: "document-1", userId, ...body, cvMarkdown: "# CV", coverLetter: "Letter", fitMatrix: []
+    })),
+    remove: vi.fn().mockResolvedValue(undefined)
+  };
 
   beforeAll(async () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService], AuthController);
@@ -103,6 +113,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobsService], JobsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService], JobAnalysisController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, ApplicationsService], ApplicationsController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, CareerDocumentsService], CareerDocumentsController);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [
@@ -117,7 +128,8 @@ describe("main API endpoints", () => {
         DiaryController,
         JobsController,
         JobAnalysisController,
-        ApplicationsController
+        ApplicationsController,
+        CareerDocumentsController
       ],
       providers: [
         AuthService,
@@ -131,7 +143,8 @@ describe("main API endpoints", () => {
         { provide: DiaryService, useValue: diaryService },
         { provide: JobsService, useValue: jobsService },
         { provide: JobAnalysisService, useValue: jobAnalysisService },
-        { provide: ApplicationsService, useValue: applicationsService }
+        { provide: ApplicationsService, useValue: applicationsService },
+        { provide: CareerDocumentsService, useValue: careerDocumentsService }
       ]
     }).compile();
 
@@ -324,5 +337,27 @@ describe("main API endpoints", () => {
     expect([created.statusCode, listed.statusCode, updated.statusCode, removed.statusCode]).toEqual([201, 200, 200, 204]);
     expect(created.json()).toMatchObject({ id: "application-1", userId: "single-user", status: "applied" });
     expect(applicationsService.list).toHaveBeenCalledWith("single-user", { search: "Example", status: "applied" });
+  });
+
+  it("routes generation and listing of vacancy-targeted career documents", async () => {
+    const generated = await app.inject({
+      method: "POST",
+      url: "/api/v1/career-documents/generate",
+      headers: { authorization },
+      payload: {
+        opportunityId: "job-1",
+        language: "en",
+        candidateProfile: "Five years of API testing experience with SQL and Playwright automation evidence."
+      }
+    });
+    const listed = await app.inject({
+      method: "GET",
+      url: "/api/v1/career-documents?opportunityId=job-1",
+      headers: { authorization }
+    });
+
+    expect([generated.statusCode, listed.statusCode]).toEqual([201, 200]);
+    expect(generated.json()).toMatchObject({ id: "document-1", userId: "single-user", language: "en" });
+    expect(careerDocumentsService.generate).toHaveBeenCalledWith("single-user", expect.objectContaining({ opportunityId: "job-1" }));
   });
 });

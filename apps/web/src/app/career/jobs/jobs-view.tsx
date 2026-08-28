@@ -59,6 +59,7 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
         <div><span className="helper-text">{job.company}</span><h2>{job.title}{job.favorite ? " (favorita)" : ""}</h2></div>
         <div className="actions">
           <Link className="button-link" href={`/grill-me?opportunityId=${encodeURIComponent(job.id)}`}>Treinar para esta vaga</Link>
+          <Link className="button-link secondary" href={`/career/documents?opportunityId=${encodeURIComponent(job.id)}`}>Criar documentos</Link>
           <button type="button" onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? "Analisando..." : job.analysis ? "Analisar novamente" : "Analisar vaga"}
           </button>
