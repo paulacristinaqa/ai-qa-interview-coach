@@ -366,9 +366,11 @@ Com a avaliação atualizada:
 2. Siga a ordem das prioridades.
 3. Consulte ações e critérios de conclusão.
 4. Abra a pergunta ou o desafio recomendado.
-5. Registre nova evidência somente depois de realizar uma atividade real.
+5. Altere `Progresso` para `Em andamento` quando iniciar o treino.
+6. Marque como `Concluído` depois de cumprir os critérios; a data será registrada.
+7. Registre nova evidência somente depois de realizar uma atividade real.
 
-Concluir um exercício não altera automaticamente a matriz. A competência só deve ser reavaliada depois que uma evidência factual for registrada.
+O resumo do painel mostra quantos itens foram concluídos. Planos antigos, que ainda não possuem esse campo, aparecem como `Pendente`. Concluir um exercício não altera automaticamente a matriz. A competência só deve ser reavaliada depois que uma evidência factual for registrada.
 
 ### 8.5 Documents
 

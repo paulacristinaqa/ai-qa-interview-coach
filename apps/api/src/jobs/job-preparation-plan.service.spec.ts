@@ -34,7 +34,7 @@ function prismaMock(upsert = vi.fn().mockImplementation(({ create }) => ({ id: "
       { id: "challenge-api", area: "API", title: "API contract risks", difficulty: "advanced", context: "Analyze API risks.", evaluationCriteria: ["contract"] },
       { id: "challenge-automation", area: "Automation", title: "Automation strategy", difficulty: "basic", context: "Choose an automation approach.", evaluationCriteria: ["maintainability"] }
     ]) },
-    jobPreparationPlan: { upsert }
+    jobPreparationPlan: { upsert, findFirst: vi.fn(), update: vi.fn() }
   } as unknown as PrismaService;
 }
 
@@ -46,7 +46,7 @@ describe("JobPreparationPlanService", () => {
 
     expect(result).toMatchObject({ id: "plan-1", evaluationUpdatedAt: updatedAt });
     expect(items).toHaveLength(3);
-    expect(items[0]).toMatchObject({ requirementId: "required-2", priority: "high", recommendedModule: "grill-me", documentAction: "omit-until-evidenced" });
+    expect(items[0]).toMatchObject({ requirementId: "required-2", priority: "high", recommendedModule: "grill-me", documentAction: "omit-until-evidenced", progressStatus: "pending", completedAt: null });
     expect(items[0]).toMatchObject({ recommendedResource: { type: "question", id: "question-1", topic: "Behavioral" } });
     expect(items[1]).toMatchObject({ requirementId: "required-1", priority: "medium", recommendedModule: "technical-lab", documentAction: "strengthen-evidence" });
     expect(items[2]).toMatchObject({ requirementId: "preferred-1", priority: "medium", recommendedModule: "technical-lab" });
@@ -102,5 +102,47 @@ describe("JobPreparationPlanService", () => {
     await expect(new JobPreparationPlanService(prismaMock(upsert), ai).generate("user-1", "job-1"))
       .rejects.toBeInstanceOf(BadGatewayException);
     expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("updates a legacy plan item and preserves its preparation data", async () => {
+    const prisma = prismaMock();
+    const legacyItem = { requirementId: "required-1", requirement: "API automation", actions: ["Practice"], recommendedResource: { id: "challenge-api" } };
+    vi.mocked(prisma.jobPreparationPlan.findFirst).mockResolvedValue({ id: "plan-1", opportunityId: "job-1", userId: "user-1", items: [legacyItem] } as never);
+    vi.mocked(prisma.jobPreparationPlan.update).mockResolvedValue({ id: "plan-1", items: [{ ...legacyItem, progressStatus: "completed", completedAt: "2026-08-29T12:00:00.000Z" }] } as never);
+
+    const result = await new JobPreparationPlanService(prisma, {} as AiGateway)
+      .updateItemStatus("user-1", "job-1", "required-1", { status: "completed" });
+    const item = (result.items as unknown as Array<Record<string, unknown>>)[0];
+
+    expect(item).toMatchObject({ ...legacyItem, progressStatus: "completed" });
+    expect(item.completedAt).toEqual(expect.any(String));
+    expect(prisma.jobPreparationPlan.findFirst).toHaveBeenCalledWith({ where: { opportunityId: "job-1", userId: "user-1" } });
+  });
+
+  it("clears the completion date when an item returns to in progress", async () => {
+    const prisma = prismaMock();
+    vi.mocked(prisma.jobPreparationPlan.findFirst).mockResolvedValue({
+      id: "plan-1", opportunityId: "job-1", userId: "user-1",
+      items: [{ requirementId: "required-1", progressStatus: "completed", completedAt: "2026-08-29T10:00:00.000Z" }]
+    } as never);
+    vi.mocked(prisma.jobPreparationPlan.update).mockResolvedValue({ id: "plan-1", items: [{ requirementId: "required-1", progressStatus: "in_progress", completedAt: null }] } as never);
+
+    const result = await new JobPreparationPlanService(prisma, {} as AiGateway)
+      .updateItemStatus("user-1", "job-1", "required-1", { status: "in_progress" });
+
+    expect((result.items as unknown as Array<Record<string, unknown>>)[0]).toMatchObject({ progressStatus: "in_progress", completedAt: null });
+  });
+
+  it("rejects invalid progress and missing plans or items", async () => {
+    const prisma = prismaMock();
+    const service = new JobPreparationPlanService(prisma, {} as AiGateway);
+    await expect(service.updateItemStatus("user-1", "job-1", "required-1", { status: "paused" } as never)).rejects.toBeInstanceOf(BadRequestException);
+
+    vi.mocked(prisma.jobPreparationPlan.findFirst).mockResolvedValue(null);
+    await expect(service.updateItemStatus("user-1", "job-1", "required-1", { status: "pending" })).rejects.toBeInstanceOf(NotFoundException);
+
+    vi.mocked(prisma.jobPreparationPlan.findFirst).mockResolvedValue({ id: "plan-1", items: [{ requirementId: "other" }] } as never);
+    await expect(service.updateItemStatus("user-1", "job-1", "required-1", { status: "pending" })).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.jobPreparationPlan.update).not.toHaveBeenCalled();
   });
 });

@@ -343,6 +343,8 @@ Com a matriz atualizada, `Gerar plano de preparacao` transforma cada lacuna e ev
 
 Para acoes de treino, a API cruza deterministicamente o requisito com os IDs reais do banco de 708 perguntas e do catalogo de desafios. O plano salva a pergunta ou desafio recomendado e a interface abre diretamente esse recurso. A escolha nao e delegada ao provider de IA, portanto IDs inventados nunca sao aceitos; se um recurso historico for removido, a tela volta ao catalogo geral com seguranca.
 
+Cada item do plano pode ser acompanhado manualmente como `Pendente`, `Em andamento` ou `Concluido`. A conclusao registra a data, mas nao altera a matriz de competencias: uma nova avaliacao continua exigindo evidencia factual selecionada pelo usuario. Planos criados antes desse recurso aparecem como pendentes, sem necessidade de migration.
+
 Endpoints:
 
 - `GET /api/v1/job-opportunities`
@@ -353,6 +355,7 @@ Endpoints:
 - `POST /api/v1/jobs/:opportunityId/analyze`
 - `POST /api/v1/jobs/:opportunityId/evaluate-competencies`
 - `POST /api/v1/jobs/:opportunityId/preparation-plan`
+- `PATCH /api/v1/jobs/:opportunityId/preparation-plan/items/:requirementId`
 
 Os contratos completos estao registrados em `docs/api/openapi.yaml`.
 

@@ -4,6 +4,11 @@ export type PreparationPriority = "high" | "medium" | "low";
 export type RecommendedModule = "technical-lab" | "grill-me" | "evidence-library";
 export type DocumentAction = "strengthen-evidence" | "omit-until-evidenced";
 export type RecommendedResourceType = "question" | "challenge";
+export type PreparationProgressStatus = "pending" | "in_progress" | "completed";
+
+export interface UpdatePreparationProgressRequest {
+  status: PreparationProgressStatus;
+}
 
 export interface RecommendedPreparationResource {
   type: RecommendedResourceType;

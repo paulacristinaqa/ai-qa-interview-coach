@@ -9,9 +9,11 @@ import {
   DocumentAction,
   JobPreparationPlanOutput,
   PreparationPriority,
+  PreparationProgressStatus,
   PreparationSourceRequirement,
   RecommendedPreparationResource,
-  RecommendedModule
+  RecommendedModule,
+  UpdatePreparationProgressRequest
 } from "./job-preparation-plan.types";
 
 @Injectable()
@@ -90,6 +92,42 @@ export class JobPreparationPlanService {
       }
     });
   }
+
+  async updateItemStatus(
+    userId: string,
+    opportunityId: string,
+    requirementId: string,
+    request: UpdatePreparationProgressRequest
+  ) {
+    if (!isProgressStatus(request?.status)) {
+      throw new BadRequestException("Preparation progress status is invalid");
+    }
+    const plan = await this.prisma.jobPreparationPlan.findFirst({ where: { opportunityId, userId } });
+    if (!plan) throw new NotFoundException("Job preparation plan not found");
+    if (!Array.isArray(plan.items)) throw new BadRequestException("Job preparation plan items are invalid");
+
+    let found = false;
+    const items = plan.items.map((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new BadRequestException("Job preparation plan items are invalid");
+      }
+      const item = value as Record<string, Prisma.JsonValue>;
+      if (item.requirementId !== requirementId) return item;
+      found = true;
+      const existingCompletedAt = typeof item.completedAt === "string" ? item.completedAt : null;
+      return {
+        ...item,
+        progressStatus: request.status,
+        completedAt: request.status === "completed" ? existingCompletedAt ?? new Date().toISOString() : null
+      };
+    });
+    if (!found) throw new NotFoundException("Job preparation plan item not found");
+
+    return this.prisma.jobPreparationPlan.update({
+      where: { id: plan.id },
+      data: { items: items as Prisma.InputJsonValue }
+    });
+  }
 }
 
 interface QuestionResource {
@@ -117,8 +155,14 @@ function attachCatalogResources(
 ) {
   return items.map((item) => ({
     ...item,
-    recommendedResource: selectResource(item.requirement, item.recommendedModule, questions, challenges, language)
+    recommendedResource: selectResource(item.requirement, item.recommendedModule, questions, challenges, language),
+    progressStatus: "pending",
+    completedAt: null
   }));
+}
+
+function isProgressStatus(value: unknown): value is PreparationProgressStatus {
+  return value === "pending" || value === "in_progress" || value === "completed";
 }
 
 function selectResource(

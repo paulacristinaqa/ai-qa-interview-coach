@@ -1078,6 +1078,21 @@ pre {
 .preparation-plan-item.high { border-left-color: #a23c31; }
 .preparation-plan-item.medium { border-left-color: #a87813; }
 .preparation-plan-item.low { border-left-color: var(--accent); }
+.preparation-plan-item.completed { background: #f2f8f4; }
+
+.plan-progress-summary {
+  color: var(--accent-strong);
+}
+
+.plan-progress-control {
+  display: grid;
+  gap: 5px;
+  max-width: 210px;
+}
+
+.plan-progress-control select {
+  width: 100%;
+}
 
 .preparation-plan-item > div:first-child {
   display: flex;
