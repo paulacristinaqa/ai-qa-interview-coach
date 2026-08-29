@@ -411,6 +411,8 @@ Com a avaliação atualizada:
 
 O resumo do painel mostra quantos itens foram concluídos. Planos antigos, que ainda não possuem esse campo, aparecem como `Pendente`. Concluir um exercício não altera automaticamente a matriz. A competência só deve ser reavaliada depois que uma evidência factual for registrada.
 
+Se o plano for gerado novamente, o sistema mantém o progresso dos requisitos que continuam exatamente iguais. Requisitos novos ou cujo texto mudou começam como `Pendente`, evitando transportar uma conclusão para uma necessidade diferente.
+
 ### 8.5 Documents
 
 Em `/career/documents`:

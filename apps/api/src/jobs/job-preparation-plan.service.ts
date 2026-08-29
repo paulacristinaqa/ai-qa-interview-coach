@@ -21,7 +21,7 @@ export class JobPreparationPlanService {
   constructor(private readonly prisma: PrismaService, private readonly ai: AiGateway) {}
 
   async generate(userId: string, opportunityId: string) {
-    const opportunity = await this.prisma.jobOpportunity.findFirst({ where: { id: opportunityId, userId }, include: { analysis: true, competencyEvaluation: true } });
+    const opportunity = await this.prisma.jobOpportunity.findFirst({ where: { id: opportunityId, userId }, include: { analysis: true, competencyEvaluation: true, preparationPlan: true } });
     if (!opportunity) throw new NotFoundException("Job opportunity not found");
     if (!opportunity.analysis || !opportunity.competencyEvaluation) {
       throw new BadRequestException("Evaluate competencies before generating a preparation plan");
@@ -68,7 +68,7 @@ export class JobPreparationPlanService {
     } catch {
       throw new BadGatewayException("AI returned an invalid or ungrounded preparation plan");
     }
-    const items = attachCatalogResources(output.items, questions, challenges, language) as unknown as Prisma.InputJsonValue;
+    const items = attachCatalogResources(output.items, questions, challenges, language, opportunity.preparationPlan?.items) as unknown as Prisma.InputJsonValue;
 
     return this.prisma.jobPreparationPlan.upsert({
       where: { opportunityId },
@@ -151,14 +151,34 @@ function attachCatalogResources(
   items: JobPreparationPlanOutput["items"],
   questions: QuestionResource[],
   challenges: ChallengeResource[],
-  language: "pt-BR" | "en"
+  language: "pt-BR" | "en",
+  previousItems?: Prisma.JsonValue
 ) {
-  return items.map((item) => ({
-    ...item,
-    recommendedResource: selectResource(item.requirement, item.recommendedModule, questions, challenges, language),
-    progressStatus: "pending",
-    completedAt: null
-  }));
+  const previousProgress = readPreviousProgress(previousItems);
+  return items.map((item) => {
+    const progress = previousProgress.get(`${item.requirementId}\u0000${item.requirement}`);
+    return {
+      ...item,
+      recommendedResource: selectResource(item.requirement, item.recommendedModule, questions, challenges, language),
+      progressStatus: progress?.progressStatus ?? "pending",
+      completedAt: progress?.progressStatus === "completed" ? progress.completedAt : null
+    };
+  });
+}
+
+function readPreviousProgress(value: Prisma.JsonValue | undefined) {
+  const progress = new Map<string, { progressStatus: PreparationProgressStatus; completedAt: string | null }>();
+  if (!Array.isArray(value)) return progress;
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const item = entry as Record<string, Prisma.JsonValue>;
+    if (typeof item.requirementId !== "string" || typeof item.requirement !== "string" || !isProgressStatus(item.progressStatus)) continue;
+    progress.set(`${item.requirementId}\u0000${item.requirement}`, {
+      progressStatus: item.progressStatus,
+      completedAt: item.progressStatus === "completed" && typeof item.completedAt === "string" ? item.completedAt : null
+    });
+  }
+  return progress;
 }
 
 function isProgressStatus(value: unknown): value is PreparationProgressStatus {

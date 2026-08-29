@@ -81,6 +81,26 @@ describe("JobPreparationPlanService", () => {
     expect(result.summary).toContain("No gaps");
   });
 
+  it("preserves progress only when the regenerated requirement is unchanged", async () => {
+    const prisma = prismaMock();
+    vi.mocked(prisma.jobOpportunity.findFirst).mockResolvedValue({
+      ...opportunity,
+      preparationPlan: {
+        items: [
+          { requirementId: "required-2", requirement: "Release evidence", progressStatus: "completed", completedAt: "2026-08-29T12:00:00.000Z" },
+          { requirementId: "required-1", requirement: "A different requirement", progressStatus: "in_progress", completedAt: null }
+        ]
+      }
+    } as never);
+    const generate = vi.fn().mockImplementation((_prompt, fallback) => providerResponse(fallback));
+
+    const result = await new JobPreparationPlanService(prisma, { generate } as unknown as AiGateway).generate("user-1", "job-1");
+    const items = result.items as unknown as Array<Record<string, unknown>>;
+
+    expect(items.find((item) => item.requirementId === "required-2")).toMatchObject({ progressStatus: "completed", completedAt: "2026-08-29T12:00:00.000Z" });
+    expect(items.find((item) => item.requirementId === "required-1")).toMatchObject({ progressStatus: "pending", completedAt: null });
+  });
+
   it("rejects provider output that skips or reorders validated gaps", async () => {
     const upsert = vi.fn();
     const invalid = {
