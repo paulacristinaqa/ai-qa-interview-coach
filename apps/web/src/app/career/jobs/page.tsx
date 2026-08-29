@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../components/auth-provider";
 import { PageHeader, StatusMessage } from "../../../components/page";
-import type { JobAnalysis, JobOpportunity, JobStatus, WorkModel } from "../../../lib/types";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
 import {
   buildJobQuery,
   JobFilters,
@@ -55,6 +55,9 @@ export default function JobsPage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evidence, setEvidence] = useState<ProfessionalEvidence[]>([]);
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const selected = detail?.id === selectedId ? detail : items.find((item) => item.id === selectedId) ?? null;
 
   const load = useCallback(async () => {
@@ -70,6 +73,18 @@ export default function JobsPage() {
   }, [api, filters]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    let ignore = false;
+    api<ProfessionalEvidence[]>("/professional-evidence")
+      .then((data) => {
+        if (ignore) return;
+        setEvidence(data);
+        setSelectedEvidenceIds((current) => current.length ? current : data.filter((item) => item.favorite).map((item) => item.id));
+      })
+      .catch((error) => { if (!ignore) setMessage(error instanceof Error ? error.message : "Nao foi possivel carregar as evidencias."); });
+    return () => { ignore = true; };
+  }, [api]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -160,6 +175,27 @@ export default function JobsPage() {
     }
   }
 
+  function toggleEvidence(id: string) {
+    setSelectedEvidenceIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  }
+
+  async function evaluateCompetencies(job: JobOpportunity) {
+    setIsEvaluating(true);
+    try {
+      const competencyEvaluation = await api<CompetencyEvaluation>(`/jobs/${job.id}/evaluate-competencies`, {
+        method: "POST",
+        body: JSON.stringify({ evidenceIds: selectedEvidenceIds })
+      });
+      setDetail({ ...job, competencyEvaluation });
+      setItems((current) => current.map((item) => item.id === job.id ? { ...item, competencyEvaluation } : item));
+      setMessage(`Competencias avaliadas com o provider ${competencyEvaluation.providerName}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Nao foi possivel avaliar as competencias.");
+    } finally {
+      setIsEvaluating(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -222,6 +258,11 @@ export default function JobsPage() {
           onDelete={() => void remove(selected)}
           onAnalyze={() => void analyze(selected)}
           isAnalyzing={isAnalyzing}
+          evidence={evidence}
+          selectedEvidenceIds={selectedEvidenceIds}
+          onToggleEvidence={toggleEvidence}
+          onEvaluateCompetencies={() => void evaluateCompetencies(selected)}
+          isEvaluating={isEvaluating}
         />
       ) : null}
     </>

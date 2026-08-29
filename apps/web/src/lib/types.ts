@@ -119,6 +119,7 @@ export interface JobOpportunity {
   companyProfileId?: string | null;
   analysis?: JobAnalysis | null;
   application?: { id: string } | null;
+  competencyEvaluation?: CompetencyEvaluation | null;
 }
 
 export interface JobAnalysis {
@@ -188,6 +189,34 @@ export interface ProfessionalEvidence {
   sourceUrl: string | null;
   occurredAt: string | null;
   favorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CompetencyCategory = "technical" | "experience" | "education" | "certification" | "language" | "soft_skill" | "other";
+export type CompetencyStatus = "supported" | "partial" | "gap";
+
+export interface CompetencyEvaluation {
+  id: string;
+  opportunityId: string;
+  summary: string;
+  overallScore: number;
+  requirements: Array<{
+    id: string;
+    text: string;
+    category: CompetencyCategory;
+    importance: "required" | "preferred";
+    status: CompetencyStatus;
+    confidence: number;
+    evidenceIds: string[];
+    rationale: string;
+    documentGuidance: string;
+  }>;
+  evidenceIds: string[];
+  analysisUpdatedAt: string;
+  providerName: string;
+  modelName: string;
+  promptTemplateVersion: string;
   createdAt: string;
   updatedAt: string;
 }

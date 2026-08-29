@@ -248,6 +248,7 @@ Reinicie a API. O Ollama atende localmente em `http://127.0.0.1:11434` e nao req
 - explicacoes do Guided Learning;
 - perguntas iniciais e follow-ups do Grill Me.
 - analise de vagas e documentos direcionados de Career Intelligence.
+- avaliacao rastreavel de competencias contra evidencias profissionais selecionadas.
 
 As respostas passam por validacao de schema JSON. Se o Ollama nao estiver ativo, exceder o timeout ou retornar uma resposta invalida, o gateway registra apenas metadados tecnicos e usa automaticamente a resposta deterministica. Perguntas, respostas e outros dados informados pela usuaria nao sao escritos nos logs da IA.
 
@@ -334,6 +335,8 @@ No detalhe, `Analisar vaga` gera e persiste uma leitura estruturada da descricao
 
 Com `AI_PROVIDER=mock`, a analise e local e deterministica. Com `AI_PROVIDER=ollama`, o modelo local pode enriquecer a estrutura; se estiver indisponivel, o gateway retorna automaticamente ao mock. Toda saida e validada pelo schema `career.job-analysis@1.0.0` antes de ser gravada.
 
+Depois da analise, o Avaliador de Competencias compara todos os requisitos obrigatorios e desejaveis com evidencias selecionadas da Evidence Library. Cada match positivo precisa citar IDs reais e semanticamente relacionados; lacunas nao podem citar evidencias. O score e recalculado pela API, dando peso maior aos requisitos obrigatorios, para impedir inflacao pelo provider. Se a analise da vaga mudar, a interface marca a avaliacao anterior como desatualizada.
+
 Endpoints:
 
 - `GET /api/v1/job-opportunities`
@@ -342,6 +345,7 @@ Endpoints:
 - `PATCH /api/v1/job-opportunities/:opportunityId`
 - `DELETE /api/v1/job-opportunities/:opportunityId`
 - `POST /api/v1/jobs/:opportunityId/analyze`
+- `POST /api/v1/jobs/:opportunityId/evaluate-competencies`
 
 Os contratos completos estao registrados em `docs/api/openapi.yaml`.
 
@@ -451,14 +455,17 @@ Endpoints:
 30. Excluir o contato e confirmar que a empresa e a vaga continuam disponiveis.
 31. Abrir Career Intelligence > Evidence e cadastrar um projeto verdadeiro com competencias e resultado.
 32. Testar busca, tipo e favoritas; editar a evidencia e confirmar a atualizacao.
-33. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
-34. Selecionar a evidencia salva, escolher Portugues e gerar sem precisar repetir todo o perfil.
-35. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
-36. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
-37. Excluir a evidencia e confirmar que o documento gerado ainda preserva seu snapshot.
-38. Excluir um pacote e confirmar que a vaga continua disponivel.
-39. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
-40. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+33. Voltar a Jobs, selecionar a evidencia e clicar em `Avaliar competencias`.
+34. Confirmar score, cobertura de todos os requisitos, IDs citados e lacunas sem evidencia.
+35. Analisar novamente a vaga e confirmar que a matriz anterior aparece como desatualizada ate nova avaliacao.
+36. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
+37. Selecionar a evidencia salva, escolher Portugues e gerar sem precisar repetir todo o perfil.
+38. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
+39. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
+40. Excluir a evidencia e confirmar que o documento e a avaliacao anteriores preservam o snapshot e os IDs historicos.
+41. Excluir um pacote e confirmar que a vaga continua disponivel.
+42. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
+43. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
@@ -483,7 +490,7 @@ Endpoints:
 
 O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
-A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, treino direcionado, candidaturas e documentos de carreira.
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, avaliacao de competencias, treino direcionado, candidaturas e documentos de carreira.
 
 Para smoke E2E local:
 

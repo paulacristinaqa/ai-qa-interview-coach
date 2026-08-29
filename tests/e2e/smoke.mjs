@@ -89,7 +89,7 @@ const opportunity = await request("/job-opportunities", {
     workModel: "remote",
     seniority: "Senior",
     language: "English",
-    originalDescription: "Own API quality, automation strategy and release evidence."
+    originalDescription: "Required: API quality and automation strategy. Must provide release evidence. Docker is preferred."
   })
 });
 const company = await request("/companies", {
@@ -176,6 +176,17 @@ const professionalEvidence = await request("/professional-evidence", {
 const evidenceCatalog = await request("/professional-evidence?search=API&type=project&favorite=true", { headers });
 assert.ok(evidenceCatalog.some((item) => item.id === professionalEvidence.id), "professional evidence should be reusable through catalog filters");
 
+const structuredJobAnalysis = await request(`/jobs/${opportunity.id}/analyze`, { method: "POST", headers });
+assert.ok(structuredJobAnalysis.requiredRequirements.length >= 1, "job analysis should extract requirements before competency evaluation");
+const competencyEvaluation = await request(`/jobs/${opportunity.id}/evaluate-competencies`, {
+  method: "POST",
+  headers,
+  body: JSON.stringify({ evidenceIds: [professionalEvidence.id] })
+});
+assert.ok(competencyEvaluation.requirements.length >= 2, "competency evaluation should cover every analyzed requirement");
+assert.ok(competencyEvaluation.requirements.some((item) => item.evidenceIds.includes(professionalEvidence.id)), "positive matches should cite the selected evidence ID");
+assert.ok(competencyEvaluation.requirements.some((item) => item.status === "gap"), "unsupported requirements should remain explicit gaps");
+
 const careerDocument = await request("/career-documents/generate", {
   method: "POST",
   headers,
@@ -196,6 +207,8 @@ assert.ok(careerDocuments.some((item) => item.id === careerDocument.id), "career
 await request(`/professional-evidence/${professionalEvidence.id}`, { method: "DELETE", headers });
 const preservedCareerDocument = await request(`/career-documents/${careerDocument.id}`, { headers });
 assert.ok(preservedCareerDocument.candidateProfile.includes("E2E API quality project"), "generated documents should preserve their evidence snapshot");
+const opportunityWithEvaluation = await request(`/job-opportunities/${opportunity.id}`, { headers });
+assert.deepEqual(opportunityWithEvaluation.competencyEvaluation.evidenceIds, [professionalEvidence.id], "competency evaluation should preserve the evidence IDs used historically");
 await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
 await request(`/companies/${company.id}`, { method: "DELETE", headers });
 const opportunityAfterCompanyRemoval = await request(`/job-opportunities/${opportunity.id}`, { headers });
