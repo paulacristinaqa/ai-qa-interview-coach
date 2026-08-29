@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useCallback, useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader, StatusMessage } from "../../components/page";
 import { useAuth } from "../../components/auth-provider";
 import type { HelpLevel, JsonRecord, LearningEvent, Question, QuestionTopic, TechnicalChallenge } from "../../lib/types";
 
 export default function TechnicalLabPage() {
+  return <Suspense fallback={<section className="panel"><p>Carregando exercício recomendado...</p></section>}><TechnicalLabContent /></Suspense>;
+}
+
+function TechnicalLabContent() {
   const { api } = useAuth();
+  const searchParams = useSearchParams();
+  const requestedChallengeId = searchParams.get("challengeId");
   const [challenges, setChallenges] = useState<TechnicalChallenge[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [labAnswer, setLabAnswer] = useState("");
@@ -23,9 +30,9 @@ export default function TechnicalLabPage() {
   const loadCatalog = useCallback(async () => {
     try {
       const [challengeData, topicData] = await Promise.all([api<TechnicalChallenge[]>("/technical-lab/challenges"), api<QuestionTopic[]>("/questions/topics")]);
-      setChallenges(challengeData); setTopics(topicData); setSelectedId((current) => current || challengeData[0]?.id || "");
+      setChallenges(challengeData); setTopics(topicData); setSelectedId((current) => selectChallengeId(challengeData, current, requestedChallengeId));
     } catch (error) { setMessage(error instanceof Error ? error.message : "Nao foi possivel carregar o laboratorio."); }
-  }, [api]);
+  }, [api, requestedChallengeId]);
   useEffect(() => { void loadCatalog(); }, [loadCatalog]);
 
   async function loadQuestion() {
@@ -88,4 +95,10 @@ export default function TechnicalLabPage() {
       </div>
     </>
   );
+}
+
+export function selectChallengeId(challenges: TechnicalChallenge[], current: string, requested: string | null) {
+  if (requested && challenges.some((challenge) => challenge.id === requested)) return requested;
+  if (current && challenges.some((challenge) => challenge.id === current)) return current;
+  return challenges[0]?.id ?? "";
 }

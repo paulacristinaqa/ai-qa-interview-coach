@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JobOpportunity } from "../../lib/types";
-import { languageFromJob, levelFromJob, suggestTopic } from "./page";
+import { languageFromJob, levelFromJob, levelFromNumber, suggestTopic } from "./page";
 
 const job: JobOpportunity = {
   id: "job-1",
@@ -38,5 +38,9 @@ describe("job-specific Grill Me configuration", () => {
     expect(suggestTopic(portugueseJob)).toBe("SQL");
     expect(languageFromJob(portugueseJob)).toBe("pt-BR");
     expect(levelFromJob(portugueseJob)).toBe("basic");
+  });
+
+  it("maps a recommended bank question level to Grill Me", () => {
+    expect([levelFromNumber(1), levelFromNumber(2), levelFromNumber(3)]).toEqual(["basic", "intermediate", "advanced"]);
   });
 });

@@ -62,7 +62,8 @@ const preparationPlan: JobPreparationPlan = {
     actions: ["Practice Docker in a small observable scenario.", "Record the result in the Evidence Library."],
     successCriteria: ["Complete a reproducible exercise."],
     recommendedModule: "technical-lab",
-    documentAction: "omit-until-evidenced"
+    documentAction: "omit-until-evidenced",
+    recommendedResource: { type: "challenge", id: "challenge-1", title: "Docker automation scenario", detail: "Automation · basic" }
   }],
   evaluationUpdatedAt: competencyEvaluation.updatedAt,
   providerName: "mock",
@@ -114,9 +115,25 @@ describe("Job Intelligence frontend", () => {
     expect(markup).toContain("One prioritized gap");
     expect(markup).toContain("Prioridade média");
     expect(markup).toContain("Practice Docker");
-    expect(markup).toContain('href="/technical-lab"');
+    expect(markup).toContain("Docker automation scenario");
+    expect(markup).toContain('href="/technical-lab?challengeId=challenge-1"');
     expect(markup).toContain("não declarar até existir evidência");
     expect(markup).toContain("career.preparation-plan@1.0.0");
+  });
+
+  it("links a recommended catalog question to the vacancy-specific Grill Me", () => {
+    const questionPlan: JobPreparationPlan = {
+      ...preparationPlan,
+      items: [{
+        ...preparationPlan.items[0],
+        recommendedModule: "grill-me",
+        recommendedResource: { type: "question", id: "question-1", title: "Explain a quality decision", detail: "Behavioral · level 2", topic: "Behavioral", language: "en", level: 2 }
+      }]
+    };
+    const markup = renderToStaticMarkup(<JobPreparationPlanPanel plan={questionPlan} opportunityId="job-1" />);
+
+    expect(markup).toContain("Explain a quality decision");
+    expect(markup).toContain('href="/grill-me?opportunityId=job-1&amp;questionId=question-1"');
   });
 
   it("marks a persisted plan as stale after a new competency evaluation", () => {

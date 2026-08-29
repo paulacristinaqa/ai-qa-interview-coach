@@ -16,6 +16,12 @@ export class QuestionsService {
     });
   }
 
+  async get(questionId: string) {
+    const question = await this.prisma.question.findUnique({ where: { id: questionId } });
+    if (!question) throw new NotFoundException("Question not found");
+    return question;
+  }
+
   async topics() {
     const rows = await this.prisma.question.findMany({
       select: { topic: true, competency: true },

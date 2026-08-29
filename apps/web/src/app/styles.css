@@ -1119,6 +1119,20 @@ pre {
   color: var(--accent-strong);
 }
 
+.recommended-resource {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef3f7;
+}
+
+.recommended-resource span,
+.recommended-resource small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;

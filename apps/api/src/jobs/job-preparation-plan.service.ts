@@ -1,4 +1,5 @@
 import { BadGatewayException, BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { jobPreparationPlanSchema, validateAiOutput } from "../ai/ai-output-schemas";
 import { AiGateway } from "../ai/ai-gateway.service";
 import { createPromptRequest } from "../ai/prompts/prompt-template.registry";
@@ -9,6 +10,7 @@ import {
   JobPreparationPlanOutput,
   PreparationPriority,
   PreparationSourceRequirement,
+  RecommendedPreparationResource,
   RecommendedModule
 } from "./job-preparation-plan.types";
 
@@ -17,10 +19,7 @@ export class JobPreparationPlanService {
   constructor(private readonly prisma: PrismaService, private readonly ai: AiGateway) {}
 
   async generate(userId: string, opportunityId: string) {
-    const opportunity = await this.prisma.jobOpportunity.findFirst({
-      where: { id: opportunityId, userId },
-      include: { analysis: true, competencyEvaluation: true }
-    });
+    const opportunity = await this.prisma.jobOpportunity.findFirst({ where: { id: opportunityId, userId }, include: { analysis: true, competencyEvaluation: true } });
     if (!opportunity) throw new NotFoundException("Job opportunity not found");
     if (!opportunity.analysis || !opportunity.competencyEvaluation) {
       throw new BadRequestException("Evaluate competencies before generating a preparation plan");
@@ -31,6 +30,17 @@ export class JobPreparationPlanService {
 
     const sources = parseSources(opportunity.competencyEvaluation.requirements);
     const language = resolveLanguage(opportunity.language);
+    const [questions, challenges] = await Promise.all([
+      this.prisma.question.findMany({
+        where: { language },
+        select: { id: true, topic: true, competency: true, prompt: true, level: true },
+        orderBy: [{ level: "asc" }, { createdAt: "asc" }]
+      }),
+      this.prisma.technicalChallenge.findMany({
+        select: { id: true, area: true, title: true, difficulty: true, context: true, evaluationCriteria: true },
+        orderBy: [{ difficulty: "asc" }, { createdAt: "asc" }]
+      })
+    ]);
     const fallback = buildDeterministicPlan(sources, language);
     const generated = await this.ai.generate<JobPreparationPlanOutput>(
       createPromptRequest("career.preparation-plan", {
@@ -56,6 +66,7 @@ export class JobPreparationPlanService {
     } catch {
       throw new BadGatewayException("AI returned an invalid or ungrounded preparation plan");
     }
+    const items = attachCatalogResources(output.items, questions, challenges, language) as unknown as Prisma.InputJsonValue;
 
     return this.prisma.jobPreparationPlan.upsert({
       where: { opportunityId },
@@ -63,7 +74,7 @@ export class JobPreparationPlanService {
         userId,
         opportunityId,
         summary: output.summary,
-        items: output.items,
+        items,
         evaluationUpdatedAt: opportunity.competencyEvaluation.updatedAt,
         providerName: generated.providerName,
         modelName: generated.modelName,
@@ -71,7 +82,7 @@ export class JobPreparationPlanService {
       },
       update: {
         summary: output.summary,
-        items: output.items,
+        items,
         evaluationUpdatedAt: opportunity.competencyEvaluation.updatedAt,
         providerName: generated.providerName,
         modelName: generated.modelName,
@@ -79,6 +90,96 @@ export class JobPreparationPlanService {
       }
     });
   }
+}
+
+interface QuestionResource {
+  id: string;
+  topic: string;
+  competency: string;
+  prompt: string;
+  level: number;
+}
+
+interface ChallengeResource {
+  id: string;
+  area: string;
+  title: string;
+  difficulty: string;
+  context: string;
+  evaluationCriteria: unknown;
+}
+
+function attachCatalogResources(
+  items: JobPreparationPlanOutput["items"],
+  questions: QuestionResource[],
+  challenges: ChallengeResource[],
+  language: "pt-BR" | "en"
+) {
+  return items.map((item) => ({
+    ...item,
+    recommendedResource: selectResource(item.requirement, item.recommendedModule, questions, challenges, language)
+  }));
+}
+
+function selectResource(
+  requirement: string,
+  module: RecommendedModule,
+  questions: QuestionResource[],
+  challenges: ChallengeResource[],
+  language: "pt-BR" | "en"
+): RecommendedPreparationResource | null {
+  if (module === "evidence-library") return null;
+  if (module === "grill-me") {
+    const question = bestMatch(requirement, questions, (item) => `${item.topic} ${item.competency} ${item.prompt}`)
+      ?? questions[0];
+    return question ? {
+      type: "question",
+      id: question.id,
+      title: question.prompt,
+      detail: `${question.topic} · level ${question.level}`,
+      topic: question.topic,
+      language,
+      level: question.level
+    } : null;
+  }
+  const inferredArea = inferTechnicalArea(requirement);
+  const areaChallenges = challenges.filter((item) => item.area.toLowerCase() === inferredArea.toLowerCase());
+  const challenge = bestMatch(requirement, areaChallenges.length ? areaChallenges : challenges, (item) =>
+    `${item.area} ${item.title} ${item.context} ${stringArray(item.evaluationCriteria).join(" ")}`
+  ) ?? areaChallenges[0] ?? challenges[0];
+  return challenge ? {
+    type: "challenge",
+    id: challenge.id,
+    title: challenge.title,
+    detail: `${challenge.area} · ${challenge.difficulty}`
+  } : null;
+}
+
+function bestMatch<T>(requirement: string, catalog: T[], text: (item: T) => string): T | undefined {
+  const requirementTokens = tokens(requirement);
+  let selected: { item: T; score: number } | undefined;
+  for (const item of catalog) {
+    const candidateTokens = new Set(tokens(text(item)));
+    const score = requirementTokens.reduce((total, token) => total + (candidateTokens.has(token) ? 1 : 0), 0);
+    if (!selected || score > selected.score) selected = { item, score };
+  }
+  return selected?.item;
+}
+
+function tokens(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length > 2);
+}
+
+function inferTechnicalArea(requirement: string) {
+  const normalized = requirement.toLowerCase();
+  if (/\bsql\b|database|banco de dados/.test(normalized)) return "SQL";
+  if (/\bapi\b|rest|postman|contract/.test(normalized)) return "API";
+  if (/playwright|cypress|selenium|automat|docker|ci\/cd|pipeline/.test(normalized)) return "Automation";
+  return "Test Design";
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function parseSources(value: unknown): PreparationSourceRequirement[] {

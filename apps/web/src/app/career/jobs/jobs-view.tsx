@@ -121,7 +121,9 @@ const moduleLabels: Record<RecommendedPreparationModule, string> = {
   "evidence-library": "Evidence Library"
 };
 
-function moduleHref(module: RecommendedPreparationModule, opportunityId: string) {
+function moduleHref(module: RecommendedPreparationModule, opportunityId: string, resource: JobPreparationPlan["items"][number]["recommendedResource"]) {
+  if (resource?.type === "challenge") return `/technical-lab?challengeId=${encodeURIComponent(resource.id)}`;
+  if (resource?.type === "question") return `/grill-me?opportunityId=${encodeURIComponent(opportunityId)}&questionId=${encodeURIComponent(resource.id)}`;
   if (module === "technical-lab") return "/technical-lab";
   if (module === "grill-me") return `/grill-me?opportunityId=${encodeURIComponent(opportunityId)}`;
   return "/career/evidence";
@@ -138,7 +140,10 @@ export function JobPreparationPlanPanel({ plan, opportunityId }: { plan: JobPrep
           <h4>Ações</h4><ol>{item.actions.map((action) => <li key={action}>{action}</li>)}</ol>
           <h4>Pronto quando</h4><ul>{item.successCriteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
           <p className="helper-text">Documentos: {item.documentAction === "omit-until-evidenced" ? "não declarar até existir evidência" : "fortalecer a evidência antes de destacar"}.</p>
-          <Link className="text-link" href={moduleHref(item.recommendedModule, opportunityId)}>Abrir {moduleLabels[item.recommendedModule]}</Link>
+          {item.recommendedResource ? <div className="recommended-resource"><span>Exercício recomendado</span><strong>{item.recommendedResource.title}</strong><small>{item.recommendedResource.detail}</small></div> : null}
+          <Link className="text-link" href={moduleHref(item.recommendedModule, opportunityId, item.recommendedResource)}>
+            Abrir {item.recommendedResource?.type === "question" ? "pergunta recomendada" : item.recommendedResource?.type === "challenge" ? "desafio recomendado" : moduleLabels[item.recommendedModule]}
+          </Link>
         </article>
       ))}</div> : <p className="inline-success">A matriz atual não contém lacunas nem evidências parciais.</p>}
       <p className="helper-text">Provider: {plan.providerName} / Template: {plan.promptTemplateVersion}</p>

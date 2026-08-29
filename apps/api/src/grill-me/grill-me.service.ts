@@ -29,15 +29,19 @@ export class GrillMeService {
     const vacancy = await this.loadVacancy(userId, request.opportunityId);
     const vacancyContext = vacancy ? toVacancyContext(vacancy) : undefined;
     const level = toNumericLevel(request.level);
-    const question = await this.questionsService.next(userId, request.topic, request.language, level);
+    const question = request.questionId
+      ? await this.questionsService.get(request.questionId)
+      : await this.questionsService.next(userId, request.topic, request.language, level);
     if (!question) {
       throw new NotFoundException("No grill-me question found for the selected filters");
     }
+    if (question.language !== request.language) throw new NotFoundException("Recommended question not found for the selected language");
+    const selectedLevel = request.questionId ? fromNumericLevel(question.level) : request.level;
     const fallbackQuestion = buildOpeningPrompt(request.language, request.mode, question.prompt, vacancyContext);
     const openingQuestion = await this.generateQuestion(
       request.language,
       request.mode,
-      request.topic,
+      question.topic,
       question.prompt,
       fallbackQuestion,
       1,
@@ -49,10 +53,10 @@ export class GrillMeService {
         userId,
         language: request.language,
         targetRole: vacancy?.title ?? request.targetRole ?? "QA Engineer",
-        seniority: request.level,
-        topic: request.topic,
-        difficulty: request.level,
-        interviewerStyle: buildInterviewerStyle(request.mode, vacancy?.id),
+        seniority: selectedLevel,
+        topic: question.topic,
+        difficulty: selectedLevel,
+        interviewerStyle: buildInterviewerStyle(request.mode, vacancy?.id, question.id),
         turns: {
           create: {
             orderIndex: 1,
@@ -65,7 +69,7 @@ export class GrillMeService {
 
     return {
       mode: request.mode,
-      level: request.level,
+      level: selectedLevel,
       sourceQuestion: question,
       jobContext: vacancy ? { id: vacancy.id, title: vacancy.title, company: vacancy.company } : undefined,
       session: toGrillSession(session)
@@ -86,14 +90,17 @@ export class GrillMeService {
 
     const mode = resolveMode(session.interviewerStyle);
     const opportunityId = resolveOpportunityId(session.interviewerStyle);
+    const sourceQuestionId = resolveQuestionId(session.interviewerStyle);
     const vacancy = await this.loadVacancy(userId, opportunityId);
     const vacancyContext = vacancy ? toVacancyContext(vacancy) : undefined;
     const language = session.language as GrillMeLanguage;
     const currentTurn = session.turns.at(-1);
-    const question = await this.prisma.question.findFirst({
-      where: { topic: session.topic, language, level: toNumericLevel(session.difficulty as GrillMeLevel) },
-      orderBy: { createdAt: "asc" }
-    });
+    const question = sourceQuestionId
+      ? await this.prisma.question.findUnique({ where: { id: sourceQuestionId } })
+      : await this.prisma.question.findFirst({
+        where: { topic: session.topic, language, level: toNumericLevel(session.difficulty as GrillMeLevel) },
+        orderBy: { createdAt: "asc" }
+      });
 
     let attempt = null;
     if (currentTurn && !currentTurn.answer) {
@@ -192,13 +199,25 @@ function resolveMode(value: string | null): GrillMeMode {
 }
 
 function resolveOpportunityId(value: string | null) {
-  const marker = ":job:";
-  const markerIndex = value?.indexOf(marker) ?? -1;
-  return markerIndex >= 0 ? value?.slice(markerIndex + marker.length) : undefined;
+  return resolveMarker(value, "job");
 }
 
-function buildInterviewerStyle(mode: GrillMeMode, opportunityId?: string) {
-  return opportunityId ? `grill-me:${mode}:job:${opportunityId}` : `grill-me:${mode}`;
+function fromNumericLevel(level: number): GrillMeLevel {
+  if (level >= 3) return "advanced";
+  if (level === 2) return "intermediate";
+  return "basic";
+}
+
+function resolveQuestionId(value: string | null) {
+  return resolveMarker(value, "question");
+}
+
+function resolveMarker(value: string | null, marker: string) {
+  return value?.match(new RegExp(`:${marker}:([^:]+)`))?.[1];
+}
+
+function buildInterviewerStyle(mode: GrillMeMode, opportunityId: string | undefined, questionId: string) {
+  return [`grill-me:${mode}`, opportunityId ? `job:${opportunityId}` : "", `question:${questionId}`].filter(Boolean).join(":");
 }
 
 function buildOpeningPrompt(language: GrillMeLanguage, mode: GrillMeMode, prompt: string, vacancy?: VacancyContext) {

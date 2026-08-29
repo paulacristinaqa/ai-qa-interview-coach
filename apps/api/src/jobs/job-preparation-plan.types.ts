@@ -3,6 +3,17 @@ import { CompetencyCategory, CompetencyStatus, RequirementImportance } from "./c
 export type PreparationPriority = "high" | "medium" | "low";
 export type RecommendedModule = "technical-lab" | "grill-me" | "evidence-library";
 export type DocumentAction = "strengthen-evidence" | "omit-until-evidenced";
+export type RecommendedResourceType = "question" | "challenge";
+
+export interface RecommendedPreparationResource {
+  type: RecommendedResourceType;
+  id: string;
+  title: string;
+  detail: string;
+  topic?: string;
+  language?: "pt-BR" | "en";
+  level?: number;
+}
 
 export interface PreparationSourceRequirement {
   id: string;
