@@ -204,6 +204,10 @@ const preparationPlanWithProgress = await request(`/jobs/${opportunity.id}/prepa
 const completedPreparationItem = preparationPlanWithProgress.items.find((item) => item.requirementId === trackedPreparationItem.requirementId);
 assert.equal(completedPreparationItem.progressStatus, "completed", "preparation progress should be updated manually");
 assert.ok(completedPreparationItem.completedAt, "completed preparation should retain its completion date");
+const regeneratedPreparationPlan = await request(`/jobs/${opportunity.id}/preparation-plan`, { method: "POST", headers });
+const regeneratedTrackedItem = regeneratedPreparationPlan.items.find((item) => item.requirementId === trackedPreparationItem.requirementId);
+assert.equal(regeneratedTrackedItem.progressStatus, "completed", "regenerating an unchanged requirement should preserve progress");
+assert.equal(regeneratedTrackedItem.completedAt, completedPreparationItem.completedAt, "regeneration should preserve the original completion date");
 const recommendedQuestionItem = preparationPlan.items.find((item) => item.recommendedResource?.type === "question");
 assert.ok(recommendedQuestionItem, "a communication gap should recommend a real question");
 const recommendedGrill = await request("/grill-me/sessions", {
