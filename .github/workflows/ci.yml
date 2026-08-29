@@ -38,6 +38,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run validate:devcontainer
+      - run: docker compose -f .devcontainer/docker-compose.yml config --quiet
       - run: npm run prisma:generate
       - run: npm run db:wait
       - run: npm run prisma:migrate:deploy

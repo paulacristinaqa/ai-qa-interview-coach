@@ -1,0 +1,31 @@
+{
+  "name": "AI QA Interview Coach",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/ai-qa-interview-coach",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "npm ci && npm run prisma:generate && npm run db:wait && npm run prisma:migrate:deploy && npm run seed && npm run validate:devcontainer",
+  "postStartCommand": "npm run db:wait",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "AI QA Interview Coach",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    }
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb",
+    "storage": "16gb"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Prisma.prisma",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "remoteUser": "node"
+}

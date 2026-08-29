@@ -30,8 +30,8 @@ O modo padrão utiliza `AI_PROVIDER=mock`. Ele funciona localmente, sem chave de
 | Conteúdo | Local de armazenamento |
 | --- | --- |
 | Código, migrations, testes e documentação | Repositório GitHub |
-| Configurações locais e senhas | Arquivo `.env` de cada máquina |
-| Vagas, evidências, entrevistas e demais dados pessoais | PostgreSQL local |
+| Configurações locais e senhas | Arquivo `.env` de cada máquina ou variáveis privadas do Codespace |
+| Vagas, evidências, entrevistas e demais dados pessoais | PostgreSQL local ou do Codespace aberto |
 | Histórico de commits e branches | GitHub depois do `git push` |
 
 O `git clone` transfere o projeto, mas não transfere o banco PostgreSQL da máquina anterior. Em uma instalação nova, o seed cria um banco inicial limpo.
@@ -148,6 +148,43 @@ npm.cmd run build
 
 No macOS ou Linux, substitua `npm.cmd` por `npm`.
 
+### 4.5 Alternativa: trabalhar pelo navegador com GitHub Codespaces
+
+Esta alternativa permite continuar de outra máquina sem instalar Node.js ou Docker nela:
+
+1. Entre no GitHub com a conta proprietária do repositório.
+2. Abra o repositório e selecione `Code` > `Codespaces`.
+3. Clique em `Create codespace on main`.
+4. Aguarde o terminal concluir o setup automático.
+5. Execute:
+
+```bash
+npm run dev
+```
+
+6. Abra a porta privada `3000` quando o Codespaces oferecer o link.
+7. Entre com `paula@example.com` e `change-me-locally`.
+
+O contêiner já inclui Node.js 20, PostgreSQL 16, migrations, seed e `AI_PROVIDER=mock`. Apenas a Web é encaminhada ao navegador; ela envia as chamadas para a API por um proxy interno. Não é preciso criar `.env` nem informar chave de OpenAI.
+
+#### Como garantir que não haverá cobrança
+
+Em agosto de 2026, uma conta pessoal GitHub Free inclui 120 core-hours e 15 GB-mês de Codespaces. A máquina configurada solicita 2 cores, portanto o consumo de processamento equivale aproximadamente a duas core-hours por hora ativa. O uso também depende do armazenamento.
+
+- sem uma forma de pagamento válida, o GitHub bloqueia novos usos cobrados quando a cota termina;
+- se houver uma forma de pagamento cadastrada, configure um budget com `Stop usage when budget limit is reached`;
+- ao terminar, use `Codespaces: Stop Codespace` ou pare-o em [github.com/codespaces](https://github.com/codespaces);
+- fechar a aba do navegador não para o ambiente imediatamente;
+- exclua Codespaces que não serão mais usados para liberar armazenamento.
+
+Referências: [cota incluída](https://docs.github.com/en/billing/concepts/product-billing/github-codespaces) e [como parar e iniciar](https://docs.github.com/en/codespaces/developing-in-a-codespace/stopping-and-starting-a-codespace).
+
+#### Continuidade dos dados
+
+Para ver as mesmas vagas e entrevistas em outro computador, abra o mesmo Codespace. O PostgreSQL fica no volume desse ambiente. Fazer `git push` preserva o código, mas não envia os dados do banco para o GitHub. Se o Codespace for excluído, seu banco também será perdido; não o exclua enquanto precisar desses dados.
+
+O Codespace é um ambiente pessoal de desenvolvimento e não uma hospedagem pública permanente.
+
 ## 5. Iniciar e encerrar a aplicação
 
 ### Iniciar o PostgreSQL
@@ -162,6 +199,8 @@ npm.cmd run db:wait
 ```powershell
 npm.cmd run dev
 ```
+
+Esse comando inicia os dois processos em paralelo. A Web acessa a API pelo caminho relativo `/api/v1`, que é encaminhado internamente para a porta `3001`.
 
 Também é possível usar dois terminais:
 
@@ -420,18 +459,18 @@ Excluir uma empresa não exclui suas vagas; apenas remove a associação.
 - CV e carta sempre exigem revisão humana.
 - A matriz de aderência não representa probabilidade de contratação.
 
-## 10. Banco local e continuidade dos dados
+## 10. Banco e continuidade dos dados
 
-O volume Docker `postgres-data` mantém o PostgreSQL quando o container é parado ou recriado normalmente.
+Na instalação da sua máquina, o volume Docker `postgres-data` mantém o PostgreSQL quando o container é parado ou recriado normalmente. No Codespace, o volume `codespaces-postgres-data` cumpre a mesma função dentro daquele ambiente remoto.
 
 Os dados podem ser perdidos se o volume for excluído. Não execute comandos de remoção de volume sem antes confirmar que não precisa do conteúdo.
 
-Para usar exatamente os mesmos dados em máquinas diferentes, existem duas alternativas futuras:
+Para usar os mesmos dados em máquinas diferentes:
 
-1. exportar e restaurar manualmente um backup PostgreSQL;
-2. configurar um PostgreSQL gratuito na nuvem.
+1. reabra o mesmo Codespace em qualquer computador; ou
+2. futuramente, exporte e restaure um backup PostgreSQL entre instalações locais.
 
-Até essa configuração existir, cada máquina possui seu próprio banco local.
+Cada clone local continua com seu próprio banco. O código enviado ao GitHub não contém os dados pessoais do PostgreSQL.
 
 ## 11. Comandos de verificação
 
@@ -542,3 +581,4 @@ https://github.com/paulacristinaqa/ai-qa-interview-coach.git
 - [ ] Login local realizado.
 - [ ] GitHub CLI autenticado antes do primeiro push.
 - [ ] Alterações enviadas ao GitHub antes de trocar de computador.
+- [ ] Se estiver no Codespaces, ambiente parado ao terminar e não excluído enquanto o banco for necessário.
