@@ -224,6 +224,7 @@ export interface CompetencyEvaluation {
 
 export type PreparationPriority = "high" | "medium" | "low";
 export type RecommendedPreparationModule = "technical-lab" | "grill-me" | "evidence-library";
+export type PreparationProgressStatus = "pending" | "in_progress" | "completed";
 
 export interface JobPreparationPlan {
   id: string;
@@ -239,6 +240,8 @@ export interface JobPreparationPlan {
     successCriteria: string[];
     recommendedModule: RecommendedPreparationModule;
     documentAction: "strengthen-evidence" | "omit-until-evidenced";
+    progressStatus?: PreparationProgressStatus;
+    completedAt?: string | null;
     recommendedResource?: {
       type: "question" | "challenge";
       id: string;

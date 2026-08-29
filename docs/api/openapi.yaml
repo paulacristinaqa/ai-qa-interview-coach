@@ -349,6 +349,35 @@ paths:
           description: Opportunity not found for the authenticated user
         "502":
           description: AI response failed schema or requirement-grounding validation and was not persisted
+  /jobs/{opportunityId}/preparation-plan/items/{requirementId}:
+    patch:
+      summary: Update the manual progress of one preparation item
+      description: Persists pending, in-progress or completed state without changing the competency evaluation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OpportunityId"
+        - name: requirementId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePreparationProgress"
+      responses:
+        "200":
+          description: Preparation progress updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobPreparationPlan"
+        "400":
+          description: Invalid status or malformed stored plan
+        "404":
+          description: Preparation plan or item not found for the authenticated user
   /job-applications:
     get:
       summary: List manually tracked job applications
@@ -1090,6 +1119,11 @@ components:
         successCriteria: { type: array, minItems: 1, maxItems: 3, items: { type: string } }
         recommendedModule: { type: string, enum: [technical-lab, grill-me, evidence-library] }
         documentAction: { type: string, enum: [strengthen-evidence, omit-until-evidenced] }
+        progressStatus: { $ref: "#/components/schemas/PreparationProgressStatus" }
+        completedAt:
+          oneOf:
+            - { type: string, format: date-time }
+            - { type: "null" }
         recommendedResource:
           oneOf:
             - $ref: "#/components/schemas/RecommendedPreparationResource"
@@ -1119,6 +1153,14 @@ components:
         promptTemplateVersion: { type: string, example: "career.preparation-plan@1.0.0" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    PreparationProgressStatus:
+      type: string
+      enum: [pending, in_progress, completed]
+    UpdatePreparationProgress:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/PreparationProgressStatus" }
     ApplicationStatus:
       type: string
       enum: [planned, applied, screening, interview, technical, offer, hired, rejected, withdrawn]

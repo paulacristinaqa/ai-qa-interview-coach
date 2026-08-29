@@ -105,6 +105,11 @@ describe("main API endpoints", () => {
       opportunityId: "job-1",
       summary: "Prioritized preparation plan",
       items: [{ requirementId: "required-1", priority: "high" }]
+    }),
+    updateItemStatus: vi.fn().mockResolvedValue({
+      id: "plan-1",
+      opportunityId: "job-1",
+      items: [{ requirementId: "required-1", progressStatus: "completed", completedAt: "2026-08-29T12:00:00.000Z" }]
     })
   };
   const applicationsService = {
@@ -382,6 +387,19 @@ describe("main API endpoints", () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({ id: "plan-1", opportunityId: "job-1" });
     expect(jobPreparationPlanService.generate).toHaveBeenCalledWith("single-user", "job-1");
+  });
+
+  it("routes manual preparation progress without changing the competency matrix", async () => {
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/v1/jobs/job-1/preparation-plan/items/required-1",
+      headers: { authorization },
+      payload: { status: "completed" }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ items: [{ requirementId: "required-1", progressStatus: "completed" }] });
+    expect(jobPreparationPlanService.updateItemStatus).toHaveBeenCalledWith("single-user", "job-1", "required-1", { status: "completed" });
   });
 
   it("routes the authenticated manual Job Application CRUD", async () => {

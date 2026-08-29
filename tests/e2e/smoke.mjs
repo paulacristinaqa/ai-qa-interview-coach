@@ -194,6 +194,16 @@ assert.ok(preparationPlan.items.every((item) => item.actions.length && item.succ
 assert.equal(preparationPlan.promptTemplateVersion, "career.preparation-plan@1.0.0");
 const linkedItems = preparationPlan.items.filter((item) => item.recommendedModule !== "evidence-library");
 assert.ok(linkedItems.every((item) => item.recommendedResource?.id), "practice modules should reference real catalog resources");
+assert.ok(preparationPlan.items.every((item) => item.progressStatus === "pending" && item.completedAt === null), "new preparation items should start pending");
+const trackedPreparationItem = preparationPlan.items[0];
+const preparationPlanWithProgress = await request(`/jobs/${opportunity.id}/preparation-plan/items/${encodeURIComponent(trackedPreparationItem.requirementId)}`, {
+  method: "PATCH",
+  headers,
+  body: JSON.stringify({ status: "completed" })
+});
+const completedPreparationItem = preparationPlanWithProgress.items.find((item) => item.requirementId === trackedPreparationItem.requirementId);
+assert.equal(completedPreparationItem.progressStatus, "completed", "preparation progress should be updated manually");
+assert.ok(completedPreparationItem.completedAt, "completed preparation should retain its completion date");
 const recommendedQuestionItem = preparationPlan.items.find((item) => item.recommendedResource?.type === "question");
 assert.ok(recommendedQuestionItem, "a communication gap should recommend a real question");
 const recommendedGrill = await request("/grill-me/sessions", {
@@ -237,6 +247,7 @@ assert.ok(preservedCareerDocument.candidateProfile.includes("E2E API quality pro
 const opportunityWithEvaluation = await request(`/job-opportunities/${opportunity.id}`, { headers });
 assert.deepEqual(opportunityWithEvaluation.competencyEvaluation.evidenceIds, [professionalEvidence.id], "competency evaluation should preserve the evidence IDs used historically");
 assert.equal(opportunityWithEvaluation.preparationPlan.id, preparationPlan.id, "preparation plan should remain available as a historical snapshot");
+assert.equal(opportunityWithEvaluation.preparationPlan.items.find((item) => item.requirementId === trackedPreparationItem.requirementId).progressStatus, "completed", "preparation progress should persist in job detail");
 await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
 await request(`/companies/${company.id}`, { method: "DELETE", headers });
 const opportunityAfterCompanyRemoval = await request(`/job-opportunities/${opportunity.id}`, { headers });

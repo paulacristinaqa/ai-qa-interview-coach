@@ -63,6 +63,8 @@ const preparationPlan: JobPreparationPlan = {
     successCriteria: ["Complete a reproducible exercise."],
     recommendedModule: "technical-lab",
     documentAction: "omit-until-evidenced",
+    progressStatus: "pending",
+    completedAt: null,
     recommendedResource: { type: "challenge", id: "challenge-1", title: "Docker automation scenario", detail: "Automation · basic" }
   }],
   evaluationUpdatedAt: competencyEvaluation.updatedAt,
@@ -119,6 +121,9 @@ describe("Job Intelligence frontend", () => {
     expect(markup).toContain('href="/technical-lab?challengeId=challenge-1"');
     expect(markup).toContain("não declarar até existir evidência");
     expect(markup).toContain("career.preparation-plan@1.0.0");
+    expect(markup).toContain("0/1");
+    expect(markup).toContain("Pendente");
+    expect(markup).toContain("não altera automaticamente a matriz de competências");
   });
 
   it("links a recommended catalog question to the vacancy-specific Grill Me", () => {
@@ -146,5 +151,17 @@ describe("Job Intelligence frontend", () => {
     const markup = renderToStaticMarkup(<PreparationPlanner job={staleJob} />);
 
     expect(markup).toContain("Plano desatualizado");
+  });
+
+  it("renders completed progress and its persisted completion date", () => {
+    const completedPlan: JobPreparationPlan = {
+      ...preparationPlan,
+      items: [{ ...preparationPlan.items[0], progressStatus: "completed", completedAt: "2026-08-29T12:00:00.000Z" }]
+    };
+    const markup = renderToStaticMarkup(<JobPreparationPlanPanel plan={completedPlan} opportunityId="job-1" />);
+
+    expect(markup).toContain("1/1");
+    expect(markup).toContain("Concluído em 29/08/2026");
+    expect(markup).toContain('class="preparation-plan-item medium completed"');
   });
 });

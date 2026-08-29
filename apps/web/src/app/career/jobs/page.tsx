@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../components/auth-provider";
 import { PageHeader, StatusMessage } from "../../../components/page";
-import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, PreparationProgressStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
 import {
   buildJobQuery,
   JobFilters,
@@ -57,6 +57,7 @@ export default function JobsPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isGeneratingPreparationPlan, setIsGeneratingPreparationPlan] = useState(false);
+  const [updatingPreparationRequirementId, setUpdatingPreparationRequirementId] = useState<string | null>(null);
   const [evidence, setEvidence] = useState<ProfessionalEvidence[]>([]);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const selected = detail?.id === selectedId ? detail : items.find((item) => item.id === selectedId) ?? null;
@@ -211,6 +212,23 @@ export default function JobsPage() {
     }
   }
 
+  async function updatePreparationStatus(job: JobOpportunity, requirementId: string, status: PreparationProgressStatus) {
+    setUpdatingPreparationRequirementId(requirementId);
+    try {
+      const preparationPlan = await api<JobPreparationPlan>(`/jobs/${job.id}/preparation-plan/items/${encodeURIComponent(requirementId)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status })
+      });
+      setDetail({ ...job, preparationPlan });
+      setItems((current) => current.map((item) => item.id === job.id ? { ...item, preparationPlan } : item));
+      setMessage(`Progresso atualizado para ${status === "completed" ? "concluído" : status === "in_progress" ? "em andamento" : "pendente"}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Nao foi possivel atualizar o progresso.");
+    } finally {
+      setUpdatingPreparationRequirementId(null);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -280,6 +298,8 @@ export default function JobsPage() {
           isEvaluating={isEvaluating}
           onGeneratePreparationPlan={() => void generatePreparationPlan(selected)}
           isGeneratingPreparationPlan={isGeneratingPreparationPlan}
+          onUpdatePreparationStatus={(requirementId, status) => void updatePreparationStatus(selected, requirementId, status)}
+          updatingPreparationRequirementId={updatingPreparationRequirementId}
         />
       ) : null}
     </>

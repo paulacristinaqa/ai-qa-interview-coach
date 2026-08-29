@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, ProfessionalEvidence, RecommendedPreparationModule, WorkModel } from "../../../lib/types";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, PreparationProgressStatus, ProfessionalEvidence, RecommendedPreparationModule, WorkModel } from "../../../lib/types";
 import { evidenceTypeLabels } from "../evidence/evidence-view";
 
 export const statusLabels: Record<JobStatus, string> = {
@@ -47,7 +47,7 @@ export function JobOpportunityCard({ job, selected, onSelect }: {
   );
 }
 
-export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnalyzing, evidence = [], selectedEvidenceIds = [], onToggleEvidence, onEvaluateCompetencies, isEvaluating, onGeneratePreparationPlan, isGeneratingPreparationPlan }: {
+export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnalyzing, evidence = [], selectedEvidenceIds = [], onToggleEvidence, onEvaluateCompetencies, isEvaluating, onGeneratePreparationPlan, isGeneratingPreparationPlan, onUpdatePreparationStatus, updatingPreparationRequirementId }: {
   job: JobOpportunity;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -60,6 +60,8 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
   isEvaluating?: boolean;
   onGeneratePreparationPlan?: () => void;
   isGeneratingPreparationPlan?: boolean;
+  onUpdatePreparationStatus?: (requirementId: string, status: PreparationProgressStatus) => void;
+  updatingPreparationRequirementId?: string | null;
 }) {
   return (
     <section className="panel job-detail" aria-label="Detalhe da oportunidade">
@@ -83,7 +85,7 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
       <div><h3>Descricao original</h3><p className="preserved-text">{job.originalDescription}</p></div>
       {job.notes ? <div><h3>Observacoes</h3><p className="preserved-text">{job.notes}</p></div> : null}
       {job.analysis ? (
-        <><JobAnalysisPanel analysis={job.analysis} /><CompetencyEvaluator job={job} evidence={evidence} selectedEvidenceIds={selectedEvidenceIds} onToggleEvidence={onToggleEvidence} onEvaluate={onEvaluateCompetencies} isEvaluating={isEvaluating} /><PreparationPlanner job={job} onGenerate={onGeneratePreparationPlan} isGenerating={isGeneratingPreparationPlan} /></>
+        <><JobAnalysisPanel analysis={job.analysis} /><CompetencyEvaluator job={job} evidence={evidence} selectedEvidenceIds={selectedEvidenceIds} onToggleEvidence={onToggleEvidence} onEvaluate={onEvaluateCompetencies} isEvaluating={isEvaluating} /><PreparationPlanner job={job} onGenerate={onGeneratePreparationPlan} isGenerating={isGeneratingPreparationPlan} onUpdateStatus={onUpdatePreparationStatus} updatingRequirementId={updatingPreparationRequirementId} /></>
       ) : (
         <p className="helper-text">Gere uma analise estruturada para comparar esta vaga com as evidencias do seu perfil.</p>
       )}
@@ -91,10 +93,12 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
   );
 }
 
-export function PreparationPlanner({ job, onGenerate, isGenerating }: {
+export function PreparationPlanner({ job, onGenerate, isGenerating, onUpdateStatus, updatingRequirementId }: {
   job: JobOpportunity;
   onGenerate?: () => void;
   isGenerating?: boolean;
+  onUpdateStatus?: (requirementId: string, status: PreparationProgressStatus) => void;
+  updatingRequirementId?: string | null;
 }) {
   const evaluation = job.competencyEvaluation;
   const plan = job.preparationPlan;
@@ -110,7 +114,7 @@ export function PreparationPlanner({ job, onGenerate, isGenerating }: {
       {!evaluation ? <p className="helper-text">Avalie as competências antes de gerar o plano.</p> : null}
       {evaluationStale ? <p className="status-warning">Atualize a avaliação de competências antes de gerar este plano.</p> : null}
       {planStale ? <p className="status-warning"><strong>Plano desatualizado:</strong> a matriz de competências mudou.</p> : null}
-      {plan ? <JobPreparationPlanPanel plan={plan} opportunityId={job.id} /> : null}
+      {plan ? <JobPreparationPlanPanel plan={plan} opportunityId={job.id} onUpdateStatus={onUpdateStatus} updatingRequirementId={updatingRequirementId} disabled={planStale} /> : null}
     </section>
   );
 }
@@ -129,13 +133,34 @@ function moduleHref(module: RecommendedPreparationModule, opportunityId: string,
   return "/career/evidence";
 }
 
-export function JobPreparationPlanPanel({ plan, opportunityId }: { plan: JobPreparationPlan; opportunityId: string }) {
+const progressLabels: Record<PreparationProgressStatus, string> = {
+  pending: "Pendente",
+  in_progress: "Em andamento",
+  completed: "Concluído"
+};
+
+export function JobPreparationPlanPanel({ plan, opportunityId, onUpdateStatus, updatingRequirementId, disabled }: {
+  plan: JobPreparationPlan;
+  opportunityId: string;
+  onUpdateStatus?: (requirementId: string, status: PreparationProgressStatus) => void;
+  updatingRequirementId?: string | null;
+  disabled?: boolean;
+}) {
+  const completedCount = plan.items.filter((item) => item.progressStatus === "completed").length;
   return (
     <section className="preparation-plan-result" aria-label="Acoes de preparacao">
       <p><strong>{plan.summary}</strong></p>
-      {plan.items.length ? <div className="preparation-plan-items">{plan.items.map((item, index) => (
-        <article className={`preparation-plan-item ${item.priority}`} key={item.requirementId}>
+      {plan.items.length ? <><p className="plan-progress-summary"><strong>{completedCount}/{plan.items.length}</strong> itens concluídos</p><p className="helper-text">O progresso organiza o treino e não altera automaticamente a matriz de competências.</p><div className="preparation-plan-items">{plan.items.map((item, index) => {
+        const progressStatus = item.progressStatus ?? "pending";
+        return (
+          <article className={`preparation-plan-item ${item.priority} ${progressStatus}`} key={item.requirementId}>
           <div><span className="plan-order">{index + 1}</span><div><strong>{item.requirement}</strong><small>{item.priority === "high" ? "Prioridade alta" : item.priority === "medium" ? "Prioridade média" : "Prioridade baixa"} · {item.sourceStatus === "gap" ? "lacuna" : "evidência parcial"}</small></div></div>
+          <label className="plan-progress-control">Progresso
+            <select aria-label={`Progresso de ${item.requirement}`} value={progressStatus} disabled={disabled || !onUpdateStatus || updatingRequirementId === item.requirementId} onChange={(event) => onUpdateStatus?.(item.requirementId, event.target.value as PreparationProgressStatus)}>
+              {Object.entries(progressLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+            </select>
+          </label>
+          {progressStatus === "completed" && item.completedAt ? <small>Concluído em {new Date(item.completedAt).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</small> : null}
           <p>{item.objective}</p>
           <h4>Ações</h4><ol>{item.actions.map((action) => <li key={action}>{action}</li>)}</ol>
           <h4>Pronto quando</h4><ul>{item.successCriteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
@@ -144,8 +169,9 @@ export function JobPreparationPlanPanel({ plan, opportunityId }: { plan: JobPrep
           <Link className="text-link" href={moduleHref(item.recommendedModule, opportunityId, item.recommendedResource)}>
             Abrir {item.recommendedResource?.type === "question" ? "pergunta recomendada" : item.recommendedResource?.type === "challenge" ? "desafio recomendado" : moduleLabels[item.recommendedModule]}
           </Link>
-        </article>
-      ))}</div> : <p className="inline-success">A matriz atual não contém lacunas nem evidências parciais.</p>}
+          </article>
+        );
+      })}</div></> : <p className="inline-success">A matriz atual não contém lacunas nem evidências parciais.</p>}
       <p className="helper-text">Provider: {plan.providerName} / Template: {plan.promptTemplateVersion}</p>
     </section>
   );
