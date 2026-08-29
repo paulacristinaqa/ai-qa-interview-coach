@@ -2,7 +2,8 @@ import {
   careerAnalysisSchema,
   careerDocumentPackSchema,
   competencyEvaluationSchema,
-  jobAnalysisSchema
+  jobAnalysisSchema,
+  jobPreparationPlanSchema
 } from "../ai-output-schemas";
 import { PromptTemplate } from "./prompt-template.types";
 
@@ -59,6 +60,24 @@ export const careerPromptTemplates: PromptTemplate[] = [
     ],
     systemInstruction: "You are a conservative competency evaluator. Map only explicit candidate evidence, preserve uncertainty and return structured output only.",
     criteria: ["complete requirement coverage", "evidence ID traceability", "conservative confidence", "explicit gaps"]
+  },
+  {
+    id: "career.preparation-plan",
+    domain: "career",
+    task: "career-analysis",
+    version: "1.0.0",
+    objective: "Turn validated partial matches and gaps into a prioritized, traceable preparation plan.",
+    expectedInputs: ["language", "jobOpportunity", "competencyEvaluation"],
+    outputFormat: "JSON with summary and one actionable plan item for every partial match or gap.",
+    outputSchema: jobPreparationPlanSchema,
+    safetyRules: [
+      ...careerSafetyRules,
+      "Create items only for requirement IDs supplied as partial or gap.",
+      "Do not claim that an action proves competence before the user records real evidence.",
+      "Keep document guidance conservative: omit unsupported claims until evidence exists."
+    ],
+    systemInstruction: "You are a conservative QA preparation coach. Prioritize validated gaps, keep every action traceable to one requirement and return structured output only.",
+    criteria: ["complete gap coverage", "required-first priority", "observable success criteria", "no invented evidence"]
   },
   {
     id: "career.document-pack",

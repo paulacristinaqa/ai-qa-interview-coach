@@ -1,8 +1,8 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { CompetencyEvaluation, JobAnalysis, JobOpportunity } from "../../../lib/types";
-import { buildJobQuery, CompetencyEvaluationPanel, JobAnalysisPanel, JobOpportunityCard, JobOpportunityDetail } from "./jobs-view";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan } from "../../../lib/types";
+import { buildJobQuery, CompetencyEvaluationPanel, JobAnalysisPanel, JobOpportunityCard, JobOpportunityDetail, JobPreparationPlanPanel, PreparationPlanner } from "./jobs-view";
 
 const job: JobOpportunity = {
   id: "job-1", title: "Senior QA Engineer", company: "Example Labs", country: "Portugal", city: "Lisboa",
@@ -49,6 +49,29 @@ const competencyEvaluation: CompetencyEvaluation = {
   updatedAt: "2026-08-29T00:00:00.000Z"
 };
 
+const preparationPlan: JobPreparationPlan = {
+  id: "plan-1",
+  opportunityId: "job-1",
+  summary: "One prioritized gap.",
+  items: [{
+    requirementId: "preferred-1",
+    requirement: "Docker",
+    sourceStatus: "gap",
+    priority: "medium",
+    objective: "Build verifiable evidence for Docker.",
+    actions: ["Practice Docker in a small observable scenario.", "Record the result in the Evidence Library."],
+    successCriteria: ["Complete a reproducible exercise."],
+    recommendedModule: "technical-lab",
+    documentAction: "omit-until-evidenced"
+  }],
+  evaluationUpdatedAt: competencyEvaluation.updatedAt,
+  providerName: "mock",
+  modelName: "deterministic",
+  promptTemplateVersion: "career.preparation-plan@1.0.0",
+  createdAt: "2026-08-29T10:00:00.000Z",
+  updatedAt: "2026-08-29T10:00:00.000Z"
+};
+
 describe("Job Intelligence frontend", () => {
   it("renders opportunity summary and detail", () => {
     const markup = renderToStaticMarkup(<><JobOpportunityCard job={job} /><JobOpportunityDetail job={job} /></>);
@@ -83,5 +106,28 @@ describe("Job Intelligence frontend", () => {
     expect(markup).toContain("Comprovado");
     expect(markup).toContain("Lacuna");
     expect(markup).toContain("career.competency-evaluation@1.0.0");
+  });
+
+  it("renders the ordered preparation plan with module and document guidance", () => {
+    const markup = renderToStaticMarkup(<JobPreparationPlanPanel plan={preparationPlan} opportunityId="job-1" />);
+
+    expect(markup).toContain("One prioritized gap");
+    expect(markup).toContain("Prioridade média");
+    expect(markup).toContain("Practice Docker");
+    expect(markup).toContain('href="/technical-lab"');
+    expect(markup).toContain("não declarar até existir evidência");
+    expect(markup).toContain("career.preparation-plan@1.0.0");
+  });
+
+  it("marks a persisted plan as stale after a new competency evaluation", () => {
+    const staleJob = {
+      ...job,
+      analysis,
+      competencyEvaluation: { ...competencyEvaluation, updatedAt: "2026-08-29T11:00:00.000Z" },
+      preparationPlan
+    };
+    const markup = renderToStaticMarkup(<PreparationPlanner job={staleJob} />);
+
+    expect(markup).toContain("Plano desatualizado");
   });
 });

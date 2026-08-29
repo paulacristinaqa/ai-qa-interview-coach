@@ -120,6 +120,7 @@ export interface JobOpportunity {
   analysis?: JobAnalysis | null;
   application?: { id: string } | null;
   competencyEvaluation?: CompetencyEvaluation | null;
+  preparationPlan?: JobPreparationPlan | null;
 }
 
 export interface JobAnalysis {
@@ -214,6 +215,32 @@ export interface CompetencyEvaluation {
   }>;
   evidenceIds: string[];
   analysisUpdatedAt: string;
+  providerName: string;
+  modelName: string;
+  promptTemplateVersion: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PreparationPriority = "high" | "medium" | "low";
+export type RecommendedPreparationModule = "technical-lab" | "grill-me" | "evidence-library";
+
+export interface JobPreparationPlan {
+  id: string;
+  opportunityId: string;
+  summary: string;
+  items: Array<{
+    requirementId: string;
+    requirement: string;
+    sourceStatus: "partial" | "gap";
+    priority: PreparationPriority;
+    objective: string;
+    actions: string[];
+    successCriteria: string[];
+    recommendedModule: RecommendedPreparationModule;
+    documentAction: "strengthen-evidence" | "omit-until-evidenced";
+  }>;
+  evaluationUpdatedAt: string;
   providerName: string;
   modelName: string;
   promptTemplateVersion: string;

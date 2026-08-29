@@ -32,7 +32,7 @@ export class JobsService {
     }
     return this.prisma.jobOpportunity.findMany({
       where,
-      include: { analysis: true, competencyEvaluation: true, application: { select: { id: true } } },
+      include: { analysis: true, competencyEvaluation: true, preparationPlan: true, application: { select: { id: true } } },
       orderBy: [{ favorite: "desc" }, { updatedAt: "desc" }]
     });
   }
@@ -40,7 +40,7 @@ export class JobsService {
   async get(userId: string, opportunityId: string) {
     const opportunity = await this.prisma.jobOpportunity.findFirst({
       where: { id: opportunityId, userId },
-      include: { analysis: true, competencyEvaluation: true, application: { select: { id: true } } }
+      include: { analysis: true, competencyEvaluation: true, preparationPlan: true, application: { select: { id: true } } }
     });
     if (!opportunity) throw new NotFoundException("Job opportunity not found");
     return opportunity;
@@ -55,7 +55,7 @@ export class JobsService {
     return this.prisma.jobOpportunity.update({
       where: { id: opportunityId },
       data: validateUpdate(body),
-      include: { analysis: true, competencyEvaluation: true, application: { select: { id: true } } }
+      include: { analysis: true, competencyEvaluation: true, preparationPlan: true, application: { select: { id: true } } }
     });
   }
 

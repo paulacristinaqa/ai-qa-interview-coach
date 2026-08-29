@@ -186,6 +186,12 @@ const competencyEvaluation = await request(`/jobs/${opportunity.id}/evaluate-com
 assert.ok(competencyEvaluation.requirements.length >= 2, "competency evaluation should cover every analyzed requirement");
 assert.ok(competencyEvaluation.requirements.some((item) => item.evidenceIds.includes(professionalEvidence.id)), "positive matches should cite the selected evidence ID");
 assert.ok(competencyEvaluation.requirements.some((item) => item.status === "gap"), "unsupported requirements should remain explicit gaps");
+const preparationPlan = await request(`/jobs/${opportunity.id}/preparation-plan`, { method: "POST", headers });
+const actionableRequirements = competencyEvaluation.requirements.filter((item) => item.status !== "supported");
+assert.equal(preparationPlan.items.length, actionableRequirements.length, "preparation plan should cover every partial match and gap");
+assert.ok(preparationPlan.items.some((item) => item.sourceStatus === "gap"), "preparation plan should preserve explicit gaps");
+assert.ok(preparationPlan.items.every((item) => item.actions.length && item.successCriteria.length), "every preparation item should be actionable and observable");
+assert.equal(preparationPlan.promptTemplateVersion, "career.preparation-plan@1.0.0");
 
 const careerDocument = await request("/career-documents/generate", {
   method: "POST",
@@ -209,11 +215,12 @@ const preservedCareerDocument = await request(`/career-documents/${careerDocumen
 assert.ok(preservedCareerDocument.candidateProfile.includes("E2E API quality project"), "generated documents should preserve their evidence snapshot");
 const opportunityWithEvaluation = await request(`/job-opportunities/${opportunity.id}`, { headers });
 assert.deepEqual(opportunityWithEvaluation.competencyEvaluation.evidenceIds, [professionalEvidence.id], "competency evaluation should preserve the evidence IDs used historically");
+assert.equal(opportunityWithEvaluation.preparationPlan.id, preparationPlan.id, "preparation plan should remain available as a historical snapshot");
 await request(`/career-documents/${careerDocument.id}`, { method: "DELETE", headers });
 await request(`/companies/${company.id}`, { method: "DELETE", headers });
 const opportunityAfterCompanyRemoval = await request(`/job-opportunities/${opportunity.id}`, { headers });
 assert.equal(opportunityAfterCompanyRemoval.id, opportunity.id, "removing a company should preserve its opportunity");
 await request(`/job-opportunities/${opportunity.id}`, { method: "DELETE", headers });
 
-console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary and Career Intelligence modules`);
+console.log(`E2E smoke passed for interview ${session.id}, feedback, CRI, Diary and Career Intelligence preparation modules`);
 import assert from "node:assert/strict";

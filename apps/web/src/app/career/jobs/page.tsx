@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../../../components/auth-provider";
 import { PageHeader, StatusMessage } from "../../../components/page";
-import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
 import {
   buildJobQuery,
   JobFilters,
@@ -56,6 +56,7 @@ export default function JobsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isGeneratingPreparationPlan, setIsGeneratingPreparationPlan] = useState(false);
   const [evidence, setEvidence] = useState<ProfessionalEvidence[]>([]);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<string[]>([]);
   const selected = detail?.id === selectedId ? detail : items.find((item) => item.id === selectedId) ?? null;
@@ -196,6 +197,20 @@ export default function JobsPage() {
     }
   }
 
+  async function generatePreparationPlan(job: JobOpportunity) {
+    setIsGeneratingPreparationPlan(true);
+    try {
+      const preparationPlan = await api<JobPreparationPlan>(`/jobs/${job.id}/preparation-plan`, { method: "POST" });
+      setDetail({ ...job, preparationPlan });
+      setItems((current) => current.map((item) => item.id === job.id ? { ...item, preparationPlan } : item));
+      setMessage(`Plano de preparação atualizado com o provider ${preparationPlan.providerName}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Nao foi possivel gerar o plano de preparação.");
+    } finally {
+      setIsGeneratingPreparationPlan(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -263,6 +278,8 @@ export default function JobsPage() {
           onToggleEvidence={toggleEvidence}
           onEvaluateCompetencies={() => void evaluateCompetencies(selected)}
           isEvaluating={isEvaluating}
+          onGeneratePreparationPlan={() => void generatePreparationPlan(selected)}
+          isGeneratingPreparationPlan={isGeneratingPreparationPlan}
         />
       ) : null}
     </>

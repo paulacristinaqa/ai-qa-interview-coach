@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobStatus, ProfessionalEvidence, WorkModel } from "../../../lib/types";
+import type { CompetencyEvaluation, JobAnalysis, JobOpportunity, JobPreparationPlan, JobStatus, ProfessionalEvidence, RecommendedPreparationModule, WorkModel } from "../../../lib/types";
 import { evidenceTypeLabels } from "../evidence/evidence-view";
 
 export const statusLabels: Record<JobStatus, string> = {
@@ -47,7 +47,7 @@ export function JobOpportunityCard({ job, selected, onSelect }: {
   );
 }
 
-export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnalyzing, evidence = [], selectedEvidenceIds = [], onToggleEvidence, onEvaluateCompetencies, isEvaluating }: {
+export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnalyzing, evidence = [], selectedEvidenceIds = [], onToggleEvidence, onEvaluateCompetencies, isEvaluating, onGeneratePreparationPlan, isGeneratingPreparationPlan }: {
   job: JobOpportunity;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -58,6 +58,8 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
   onToggleEvidence?: (id: string) => void;
   onEvaluateCompetencies?: () => void;
   isEvaluating?: boolean;
+  onGeneratePreparationPlan?: () => void;
+  isGeneratingPreparationPlan?: boolean;
 }) {
   return (
     <section className="panel job-detail" aria-label="Detalhe da oportunidade">
@@ -81,10 +83,65 @@ export function JobOpportunityDetail({ job, onEdit, onDelete, onAnalyze, isAnaly
       <div><h3>Descricao original</h3><p className="preserved-text">{job.originalDescription}</p></div>
       {job.notes ? <div><h3>Observacoes</h3><p className="preserved-text">{job.notes}</p></div> : null}
       {job.analysis ? (
-        <><JobAnalysisPanel analysis={job.analysis} /><CompetencyEvaluator job={job} evidence={evidence} selectedEvidenceIds={selectedEvidenceIds} onToggleEvidence={onToggleEvidence} onEvaluate={onEvaluateCompetencies} isEvaluating={isEvaluating} /></>
+        <><JobAnalysisPanel analysis={job.analysis} /><CompetencyEvaluator job={job} evidence={evidence} selectedEvidenceIds={selectedEvidenceIds} onToggleEvidence={onToggleEvidence} onEvaluate={onEvaluateCompetencies} isEvaluating={isEvaluating} /><PreparationPlanner job={job} onGenerate={onGeneratePreparationPlan} isGenerating={isGeneratingPreparationPlan} /></>
       ) : (
         <p className="helper-text">Gere uma analise estruturada para comparar esta vaga com as evidencias do seu perfil.</p>
       )}
+    </section>
+  );
+}
+
+export function PreparationPlanner({ job, onGenerate, isGenerating }: {
+  job: JobOpportunity;
+  onGenerate?: () => void;
+  isGenerating?: boolean;
+}) {
+  const evaluation = job.competencyEvaluation;
+  const plan = job.preparationPlan;
+  const evaluationStale = Boolean(evaluation && job.analysis && evaluation.analysisUpdatedAt !== job.analysis.updatedAt);
+  const planStale = Boolean(plan && evaluation && plan.evaluationUpdatedAt !== evaluation.updatedAt);
+  return (
+    <section className="preparation-planner" aria-label="Plano de preparacao priorizado">
+      <div className="analysis-heading"><div><span className="helper-text">Próxima ação</span><h2>Plano de preparação priorizado</h2></div></div>
+      <p>Transforme somente lacunas e evidências parciais validadas em ações práticas. Requisitos comprovados não geram trabalho extra.</p>
+      <button type="button" onClick={onGenerate} disabled={isGenerating || !evaluation || evaluationStale}>
+        {isGenerating ? "Gerando plano..." : plan ? "Gerar novamente" : "Gerar plano de preparação"}
+      </button>
+      {!evaluation ? <p className="helper-text">Avalie as competências antes de gerar o plano.</p> : null}
+      {evaluationStale ? <p className="status-warning">Atualize a avaliação de competências antes de gerar este plano.</p> : null}
+      {planStale ? <p className="status-warning"><strong>Plano desatualizado:</strong> a matriz de competências mudou.</p> : null}
+      {plan ? <JobPreparationPlanPanel plan={plan} opportunityId={job.id} /> : null}
+    </section>
+  );
+}
+
+const moduleLabels: Record<RecommendedPreparationModule, string> = {
+  "technical-lab": "Technical Lab",
+  "grill-me": "Grill Me",
+  "evidence-library": "Evidence Library"
+};
+
+function moduleHref(module: RecommendedPreparationModule, opportunityId: string) {
+  if (module === "technical-lab") return "/technical-lab";
+  if (module === "grill-me") return `/grill-me?opportunityId=${encodeURIComponent(opportunityId)}`;
+  return "/career/evidence";
+}
+
+export function JobPreparationPlanPanel({ plan, opportunityId }: { plan: JobPreparationPlan; opportunityId: string }) {
+  return (
+    <section className="preparation-plan-result" aria-label="Acoes de preparacao">
+      <p><strong>{plan.summary}</strong></p>
+      {plan.items.length ? <div className="preparation-plan-items">{plan.items.map((item, index) => (
+        <article className={`preparation-plan-item ${item.priority}`} key={item.requirementId}>
+          <div><span className="plan-order">{index + 1}</span><div><strong>{item.requirement}</strong><small>{item.priority === "high" ? "Prioridade alta" : item.priority === "medium" ? "Prioridade média" : "Prioridade baixa"} · {item.sourceStatus === "gap" ? "lacuna" : "evidência parcial"}</small></div></div>
+          <p>{item.objective}</p>
+          <h4>Ações</h4><ol>{item.actions.map((action) => <li key={action}>{action}</li>)}</ol>
+          <h4>Pronto quando</h4><ul>{item.successCriteria.map((criterion) => <li key={criterion}>{criterion}</li>)}</ul>
+          <p className="helper-text">Documentos: {item.documentAction === "omit-until-evidenced" ? "não declarar até existir evidência" : "fortalecer a evidência antes de destacar"}.</p>
+          <Link className="text-link" href={moduleHref(item.recommendedModule, opportunityId)}>Abrir {moduleLabels[item.recommendedModule]}</Link>
+        </article>
+      ))}</div> : <p className="inline-success">A matriz atual não contém lacunas nem evidências parciais.</p>}
+      <p className="helper-text">Provider: {plan.providerName} / Template: {plan.promptTemplateVersion}</p>
     </section>
   );
 }

@@ -11,6 +11,7 @@ export type PromptTemplateId =
   | "career.opportunity-analysis"
   | "career.job-analysis"
   | "career.competency-evaluation"
+  | "career.preparation-plan"
   | "career.document-pack";
 
 export interface PromptTemplate {

@@ -29,6 +29,7 @@ import { JobsService } from "../jobs/jobs.service";
 import { JobAnalysisController } from "../jobs/job-analysis.controller";
 import { JobAnalysisService } from "../jobs/job-analysis.service";
 import { CompetencyEvaluationService } from "../jobs/competency-evaluation.service";
+import { JobPreparationPlanService } from "../jobs/job-preparation-plan.service";
 import { LearningController } from "../learning/learning.controller";
 import { LearningService } from "../learning/learning.service";
 import { TechnicalLabController } from "../technical-lab/technical-lab.controller";
@@ -98,6 +99,14 @@ describe("main API endpoints", () => {
       requirements: []
     })
   };
+  const jobPreparationPlanService = {
+    generate: vi.fn().mockResolvedValue({
+      id: "plan-1",
+      opportunityId: "job-1",
+      summary: "Prioritized preparation plan",
+      items: [{ requirementId: "required-1", priority: "high" }]
+    })
+  };
   const applicationsService = {
     list: vi.fn().mockResolvedValue([{ id: "application-1", status: "applied", opportunity: { id: "job-1" } }]),
     get: vi.fn(),
@@ -142,7 +151,7 @@ describe("main API endpoints", () => {
     Reflect.defineMetadata("design:paramtypes", [AuthService, CriService], CriController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, DiaryService], DiaryController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, JobsService], JobsController);
-    Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService, CompetencyEvaluationService], JobAnalysisController);
+    Reflect.defineMetadata("design:paramtypes", [AuthService, JobAnalysisService, CompetencyEvaluationService, JobPreparationPlanService], JobAnalysisController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, ApplicationsService], ApplicationsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CareerDocumentsService], CareerDocumentsController);
     Reflect.defineMetadata("design:paramtypes", [AuthService, CompaniesService], CompaniesController);
@@ -179,6 +188,7 @@ describe("main API endpoints", () => {
         { provide: JobsService, useValue: jobsService },
         { provide: JobAnalysisService, useValue: jobAnalysisService },
         { provide: CompetencyEvaluationService, useValue: competencyEvaluationService },
+        { provide: JobPreparationPlanService, useValue: jobPreparationPlanService },
         { provide: ApplicationsService, useValue: applicationsService },
         { provide: CareerDocumentsService, useValue: careerDocumentsService },
         { provide: CompaniesService, useValue: companiesService },
@@ -359,6 +369,18 @@ describe("main API endpoints", () => {
     expect(response.statusCode).toBe(201);
     expect(response.json()).toMatchObject({ id: "evaluation-1", opportunityId: "job-1", overallScore: 67 });
     expect(competencyEvaluationService.evaluate).toHaveBeenCalledWith("single-user", "job-1", { evidenceIds: ["evidence-1"] });
+  });
+
+  it("routes the prioritized preparation plan for an evaluated opportunity", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/jobs/job-1/preparation-plan",
+      headers: { authorization }
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ id: "plan-1", opportunityId: "job-1" });
+    expect(jobPreparationPlanService.generate).toHaveBeenCalledWith("single-user", "job-1");
   });
 
   it("routes the authenticated manual Job Application CRUD", async () => {
