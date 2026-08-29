@@ -2,6 +2,8 @@
 
 Aplicacao pessoal para treino de entrevistas tecnicas e comportamentais de QA, com foco especial em entrevistas em ingles, evolucao gradual por evidencias e apoio de IA em modo coach.
 
+Para instalar o projeto em outra maquina, conhecer os fluxos da interface e consultar procedimentos do dia a dia, use o [Manual de Utilizacao](docs/manual-de-utilizacao.md).
+
 ## Stack
 
 - Web: Next.js, React e TypeScript.
