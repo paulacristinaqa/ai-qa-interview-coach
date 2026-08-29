@@ -1,0 +1,42 @@
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces/ai-qa-interview-coach:cached
+    environment:
+      NODE_ENV: development
+      API_PORT: 3001
+      WEB_PORT: 3000
+      DATABASE_URL: postgresql://etqa:etqa_password@postgres:5432/etqa_interview_coach?schema=public
+      POSTGRES_WAIT_TIMEOUT_MS: 60000
+      POSTGRES_WAIT_INTERVAL_MS: 1000
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      API_INTERNAL_BASE_URL: http://127.0.0.1:3001
+      JWT_SECRET: codespaces-local-secret
+      SINGLE_USER_NAME: Paula QA Tester
+      SINGLE_USER_EMAIL: paula@example.com
+      SINGLE_USER_PASSWORD: change-me-locally
+      AI_PROVIDER: mock
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: etqa
+      POSTGRES_PASSWORD: etqa_password
+      POSTGRES_DB: etqa_interview_coach
+    volumes:
+      - codespaces-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etqa -d etqa_interview_coach"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  codespaces-postgres-data:

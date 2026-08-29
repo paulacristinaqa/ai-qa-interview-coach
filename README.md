@@ -151,6 +151,21 @@ Abra `http://localhost:3000` e use:
 
 Ao iniciar a API, o bootstrap cria automaticamente o usuario local, perguntas iniciais e desafios tecnicos se ainda nao existirem no banco.
 
+## Desenvolvimento remoto com custo controlado
+
+O repositorio inclui `.devcontainer/` para abrir o projeto no GitHub Codespaces pelo navegador. O ambiente cria Node.js 20 e PostgreSQL 16, aplica migrations, executa o seed e usa `AI_PROVIDER=mock`; nenhuma chave de IA ou banco pago e necessaria.
+
+1. No GitHub, abra `Code` > `Codespaces` > `Create codespace on main`.
+2. Aguarde o setup automatico terminar.
+3. No terminal do Codespace, execute `npm run dev`.
+4. A porta privada `3000` sera aberta; entre com as credenciais locais padrao.
+
+A Web usa `NEXT_PUBLIC_API_BASE_URL=/api/v1` e encaminha essas chamadas internamente para `API_INTERNAL_BASE_URL`. Isso evita expor a API em outra porta e funciona tanto localmente quanto no Codespace. Um `.env` antigo com a URL absoluta continua aceito, mas pode ser atualizado para esses valores.
+
+Contas pessoais GitHub Free incluem atualmente 120 core-hours e 15 GB-mes de Codespaces. Para impedir cobranca, nao cadastre forma de pagamento ou configure um budget com bloqueio ao atingir o limite. Pare o Codespace ao terminar: fechar apenas a aba nao o interrompe imediatamente. Reabra sempre o mesmo Codespace para manter o PostgreSQL; exclui-lo remove esse banco de desenvolvimento. Consulte a [documentacao oficial de cobranca](https://docs.github.com/en/billing/concepts/product-billing/github-codespaces) e de [parada do Codespace](https://docs.github.com/en/codespaces/developing-in-a-codespace/stopping-and-starting-a-codespace).
+
+Esse ambiente serve para desenvolvimento pessoal, nao como hospedagem publica permanente da aplicacao.
+
 ### Mapa da interface
 
 Depois do login, a navegacao lateral organiza o MVP por dominio:
@@ -492,6 +507,7 @@ Endpoints:
 - `npm.cmd run test`: roda testes dos workspaces.
 - `npm.cmd run test:e2e`: roda smoke E2E contra API local ja iniciada.
 - `npm.cmd run test:e2e:with-api`: aguarda o PostgreSQL, inicia a API compilada, roda o smoke E2E e encerra a API.
+- `npm.cmd run validate:devcontainer`: valida a configuração portátil e confirma que ela usa o provider gratuito.
 - `npm.cmd run setup:local`: executa install, Prisma Client, PostgreSQL, migrations, seed, lint, typecheck, testes e build.
 - `npm.cmd run prisma:generate`: gera Prisma Client.
 - `npm.cmd run db:wait`: aguarda o PostgreSQL aceitar consultas.
@@ -502,7 +518,7 @@ Endpoints:
 
 ## Qualidade e CI
 
-O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
+O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com validação do dev container, PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
 A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, avaliacao de competencias, plano de preparacao com exercicios reais, treino direcionado, candidaturas e documentos de carreira.
 

@@ -7,7 +7,7 @@
     "apps/web"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces",
+    "dev": "node scripts/run-dev.mjs",
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
     "build": "npm run build --workspaces",
@@ -16,6 +16,7 @@
     "test": "npm run test --workspaces",
     "test:e2e": "node tests/e2e/smoke.mjs",
     "test:e2e:with-api": "node scripts/run-e2e-with-api.mjs",
+    "validate:devcontainer": "node scripts/validate-devcontainer.mjs",
     "setup:local": "powershell -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "prisma:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
