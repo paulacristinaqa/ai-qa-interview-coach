@@ -239,6 +239,15 @@ export interface JobPreparationPlan {
     successCriteria: string[];
     recommendedModule: RecommendedPreparationModule;
     documentAction: "strengthen-evidence" | "omit-until-evidenced";
+    recommendedResource?: {
+      type: "question" | "challenge";
+      id: string;
+      title: string;
+      detail: string;
+      topic?: string;
+      language?: "pt-BR" | "en";
+      level?: number;
+    } | null;
   }>;
   evaluationUpdatedAt: string;
   providerName: string;

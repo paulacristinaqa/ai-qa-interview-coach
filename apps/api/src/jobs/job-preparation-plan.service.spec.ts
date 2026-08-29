@@ -29,6 +29,11 @@ function providerResponse(output: unknown) {
 function prismaMock(upsert = vi.fn().mockImplementation(({ create }) => ({ id: "plan-1", ...create }))) {
   return {
     jobOpportunity: { findFirst: vi.fn().mockResolvedValue(opportunity) },
+    question: { findMany: vi.fn().mockResolvedValue([{ id: "question-1", topic: "Behavioral", competency: "Communication", prompt: "Explain a release decision.", level: 2 }]) },
+    technicalChallenge: { findMany: vi.fn().mockResolvedValue([
+      { id: "challenge-api", area: "API", title: "API contract risks", difficulty: "advanced", context: "Analyze API risks.", evaluationCriteria: ["contract"] },
+      { id: "challenge-automation", area: "Automation", title: "Automation strategy", difficulty: "basic", context: "Choose an automation approach.", evaluationCriteria: ["maintainability"] }
+    ]) },
     jobPreparationPlan: { upsert }
   } as unknown as PrismaService;
 }
@@ -42,8 +47,10 @@ describe("JobPreparationPlanService", () => {
     expect(result).toMatchObject({ id: "plan-1", evaluationUpdatedAt: updatedAt });
     expect(items).toHaveLength(3);
     expect(items[0]).toMatchObject({ requirementId: "required-2", priority: "high", recommendedModule: "grill-me", documentAction: "omit-until-evidenced" });
+    expect(items[0]).toMatchObject({ recommendedResource: { type: "question", id: "question-1", topic: "Behavioral" } });
     expect(items[1]).toMatchObject({ requirementId: "required-1", priority: "medium", recommendedModule: "technical-lab", documentAction: "strengthen-evidence" });
     expect(items[2]).toMatchObject({ requirementId: "preferred-1", priority: "medium", recommendedModule: "technical-lab" });
+    expect(items[2]).toMatchObject({ recommendedResource: { type: "challenge", id: "challenge-automation" } });
     expect(generate).toHaveBeenCalledWith(expect.objectContaining({ promptTemplateVersion: "career.preparation-plan@1.0.0" }), expect.anything());
   });
 

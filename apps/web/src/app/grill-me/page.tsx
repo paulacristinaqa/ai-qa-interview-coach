@@ -14,6 +14,7 @@ function GrillMeContent() {
   const { api } = useAuth();
   const searchParams = useSearchParams();
   const opportunityId = searchParams.get("opportunityId");
+  const questionId = searchParams.get("questionId");
   const [topics, setTopics] = useState<QuestionTopic[]>([]);
   const [bankCount, setBankCount] = useState(0);
   const [session, setSession] = useState<InterviewSession | null>(null);
@@ -32,8 +33,13 @@ function GrillMeContent() {
         api<Question[]>("/questions")
       ]);
       setTopics(topicData); setBankCount(bankData.length);
+      const recommended = questionId ? bankData.find((item) => item.id === questionId) : undefined;
+      if (recommended) {
+        setSourceQuestion(recommended);
+        setConfig((current) => ({ ...current, topic: recommended.topic, language: recommended.language, level: levelFromNumber(recommended.level) }));
+      }
     } catch (error) { setMessage(error instanceof Error ? error.message : "Nao foi possivel carregar o catalogo."); }
-  }, [api]);
+  }, [api, questionId]);
   useEffect(() => { void loadCatalog(); }, [loadCatalog]);
 
   useEffect(() => {
@@ -48,20 +54,20 @@ function GrillMeContent() {
         setOpportunity(job);
         setConfig((current) => ({
           ...current,
-          topic: suggestTopic(job),
-          language: languageFromJob(job),
-          level: levelFromJob(job)
+          topic: questionId ? current.topic : suggestTopic(job),
+          language: questionId ? current.language : languageFromJob(job),
+          level: questionId ? current.level : levelFromJob(job)
         }));
       })
       .catch((error) => { if (!ignore) setMessage(error instanceof Error ? error.message : "Nao foi possivel carregar a vaga."); });
     return () => { ignore = true; };
-  }, [api, opportunityId]);
+  }, [api, opportunityId, questionId]);
 
   async function start() {
     try {
       const response = await api<GrillMeResponse>("/grill-me/sessions", {
         method: "POST",
-        body: JSON.stringify({ ...config, targetRole: opportunity?.title ?? "QA Automation Engineer", opportunityId: opportunity?.id })
+        body: JSON.stringify({ ...config, targetRole: opportunity?.title ?? "QA Automation Engineer", opportunityId: opportunity?.id, questionId: sourceQuestion?.id === questionId ? questionId : undefined })
       });
       setSession(response.session); setSourceQuestion(response.sourceQuestion ?? null); setAnswer(""); setResult(null);
       setMessage("");
@@ -130,5 +136,11 @@ export function languageFromJob(job: JobOpportunity): "pt-BR" | "en" {
 export function levelFromJob(job: JobOpportunity): GrillLevel {
   if (/senior|lead|principal|staff/i.test(job.seniority)) return "advanced";
   if (/mid|pleno|intermediate/i.test(job.seniority)) return "intermediate";
+  return "basic";
+}
+
+export function levelFromNumber(level: number): GrillLevel {
+  if (level >= 3) return "advanced";
+  if (level === 2) return "intermediate";
   return "basic";
 }

@@ -272,12 +272,13 @@ describe("main API endpoints", () => {
         language: "en",
         level: "advanced",
         mode: "realistic",
-        opportunityId: "job-1"
+        opportunityId: "job-1",
+        questionId: "question-1"
       }
     });
 
     expect(response.statusCode).toBe(201);
-    expect(grillMeService.start).toHaveBeenCalledWith("single-user", expect.objectContaining({ opportunityId: "job-1" }));
+    expect(grillMeService.start).toHaveBeenCalledWith("single-user", expect.objectContaining({ opportunityId: "job-1", questionId: "question-1" }));
   });
 
   it("routes Knowledge, CRI and Developer Diary for the authenticated user", async () => {

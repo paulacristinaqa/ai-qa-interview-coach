@@ -89,7 +89,7 @@ const opportunity = await request("/job-opportunities", {
     workModel: "remote",
     seniority: "Senior",
     language: "English",
-    originalDescription: "Required: API quality and automation strategy. Must provide release evidence. Docker is preferred."
+    originalDescription: "Required: API quality and automation strategy. Must provide release evidence. Strong communication is required. Docker is preferred."
   })
 });
 const company = await request("/companies", {
@@ -192,6 +192,27 @@ assert.equal(preparationPlan.items.length, actionableRequirements.length, "prepa
 assert.ok(preparationPlan.items.some((item) => item.sourceStatus === "gap"), "preparation plan should preserve explicit gaps");
 assert.ok(preparationPlan.items.every((item) => item.actions.length && item.successCriteria.length), "every preparation item should be actionable and observable");
 assert.equal(preparationPlan.promptTemplateVersion, "career.preparation-plan@1.0.0");
+const linkedItems = preparationPlan.items.filter((item) => item.recommendedModule !== "evidence-library");
+assert.ok(linkedItems.every((item) => item.recommendedResource?.id), "practice modules should reference real catalog resources");
+const recommendedQuestionItem = preparationPlan.items.find((item) => item.recommendedResource?.type === "question");
+assert.ok(recommendedQuestionItem, "a communication gap should recommend a real question");
+const recommendedGrill = await request("/grill-me/sessions", {
+  method: "POST",
+  headers,
+  body: JSON.stringify({
+    topic: recommendedQuestionItem.recommendedResource.topic,
+    language: recommendedQuestionItem.recommendedResource.language,
+    level: recommendedQuestionItem.recommendedResource.level >= 3 ? "advanced" : recommendedQuestionItem.recommendedResource.level === 2 ? "intermediate" : "basic",
+    mode: "realistic",
+    opportunityId: opportunity.id,
+    questionId: recommendedQuestionItem.recommendedResource.id
+  })
+});
+assert.equal(recommendedGrill.sourceQuestion.id, recommendedQuestionItem.recommendedResource.id, "Grill Me should start from the exact recommended question");
+const recommendedChallengeItem = preparationPlan.items.find((item) => item.recommendedResource?.type === "challenge");
+assert.ok(recommendedChallengeItem, "a technical gap should recommend a real challenge");
+const challengeCatalog = await request("/technical-lab/challenges", { headers });
+assert.ok(challengeCatalog.some((item) => item.id === recommendedChallengeItem.recommendedResource.id), "recommended challenge ID should exist in Technical Lab");
 
 const careerDocument = await request("/career-documents/generate", {
   method: "POST",

@@ -825,6 +825,7 @@ components:
         mode: { type: string, enum: [standard, light-pressure, realistic] }
         targetRole: { type: string }
         opportunityId: { type: string, format: uuid }
+        questionId: { type: string, format: uuid, description: Exact catalog question selected by a preparation plan. }
     SubmitGrillMeAnswerRequest:
       type: object
       required: [answer]
@@ -1089,6 +1090,21 @@ components:
         successCriteria: { type: array, minItems: 1, maxItems: 3, items: { type: string } }
         recommendedModule: { type: string, enum: [technical-lab, grill-me, evidence-library] }
         documentAction: { type: string, enum: [strengthen-evidence, omit-until-evidenced] }
+        recommendedResource:
+          oneOf:
+            - $ref: "#/components/schemas/RecommendedPreparationResource"
+            - type: "null"
+    RecommendedPreparationResource:
+      type: object
+      required: [type, id, title, detail]
+      properties:
+        type: { type: string, enum: [question, challenge] }
+        id: { type: string, format: uuid }
+        title: { type: string }
+        detail: { type: string }
+        topic: { type: string }
+        language: { type: string, enum: [pt-BR, en] }
+        level: { type: integer, minimum: 1, maximum: 3 }
     JobPreparationPlan:
       type: object
       required: [id, opportunityId, summary, items, evaluationUpdatedAt, providerName, modelName, promptTemplateVersion, createdAt, updatedAt]
