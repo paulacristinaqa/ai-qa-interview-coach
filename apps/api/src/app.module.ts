@@ -32,6 +32,7 @@ import { JobsService } from "./jobs/jobs.service";
 import { JobAnalysisController } from "./jobs/job-analysis.controller";
 import { JobAnalysisService } from "./jobs/job-analysis.service";
 import { CompetencyEvaluationService } from "./jobs/competency-evaluation.service";
+import { JobPreparationPlanService } from "./jobs/job-preparation-plan.service";
 import { LearningController } from "./learning/learning.controller";
 import { LearningService } from "./learning/learning.service";
 import { QuestionsController } from "./questions/questions.controller";
@@ -82,6 +83,7 @@ import { TechnicalLabService } from "./technical-lab/technical-lab.service";
     JobsService,
     JobAnalysisService,
     CompetencyEvaluationService,
+    JobPreparationPlanService,
     ApplicationsService,
     CareerDocumentsService,
     CompaniesService,

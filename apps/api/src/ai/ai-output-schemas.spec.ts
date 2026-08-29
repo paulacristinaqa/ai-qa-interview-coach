@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AiResponseValidationError,
   careerDocumentPackSchema,
+  jobPreparationPlanSchema,
   parseAndValidateAiOutput,
   questionSchema,
   technicalLabFeedbackSchema
@@ -71,5 +72,43 @@ describe("AI output validation", () => {
     };
 
     expect(parseAndValidateAiOutput(JSON.stringify(output), careerDocumentPackSchema)).toEqual(output);
+  });
+
+  it("accepts a grounded Career preparation plan item", () => {
+    const output = {
+      summary: "One required gap.",
+      items: [{
+        requirementId: "required-1",
+        requirement: "Docker",
+        sourceStatus: "gap",
+        priority: "high",
+        objective: "Build verifiable evidence.",
+        actions: ["Practice in a small scenario."],
+        successCriteria: ["Retain reproducible evidence."],
+        recommendedModule: "technical-lab",
+        documentAction: "omit-until-evidenced"
+      }]
+    };
+
+    expect(parseAndValidateAiOutput(JSON.stringify(output), jobPreparationPlanSchema)).toEqual(output);
+  });
+
+  it("rejects a preparation plan without observable actions", () => {
+    const output = {
+      summary: "Invalid plan",
+      items: [{
+        requirementId: "required-1",
+        requirement: "Docker",
+        sourceStatus: "gap",
+        priority: "high",
+        objective: "Build evidence.",
+        actions: [],
+        successCriteria: ["Done"],
+        recommendedModule: "technical-lab",
+        documentAction: "omit-until-evidenced"
+      }]
+    };
+
+    expect(() => parseAndValidateAiOutput(JSON.stringify(output), jobPreparationPlanSchema)).toThrowError(AiResponseValidationError);
   });
 });

@@ -63,4 +63,12 @@ describe("prompt template registry", () => {
       "cvMarkdown", "coverLetter", "fitMatrix", "unsupportedClaims"
     ]);
   });
+
+  it("registers the grounded preparation plan contract", () => {
+    const template = getPromptTemplate("career.preparation-plan");
+
+    expect(template.version).toBe("1.0.0");
+    expect(template.expectedInputs).toContain("competencyEvaluation");
+    expect(template.safetyRules.join(" ")).toContain("partial or gap");
+  });
 });

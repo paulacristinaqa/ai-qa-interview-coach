@@ -337,6 +337,8 @@ Com `AI_PROVIDER=mock`, a analise e local e deterministica. Com `AI_PROVIDER=oll
 
 Depois da analise, o Avaliador de Competencias compara todos os requisitos obrigatorios e desejaveis com evidencias selecionadas da Evidence Library. Cada match positivo precisa citar IDs reais e semanticamente relacionados; lacunas nao podem citar evidencias. O score e recalculado pela API, dando peso maior aos requisitos obrigatorios, para impedir inflacao pelo provider. Se a analise da vaga mudar, a interface marca a avaliacao anterior como desatualizada.
 
+Com a matriz atualizada, `Gerar plano de preparacao` transforma cada lacuna e evidencia parcial em uma sequencia priorizada. Lacunas obrigatorias aparecem primeiro; cada item registra objetivo, acoes, criterios observaveis de conclusao, modulo recomendado e orientacao conservadora para CV/carta. Requisitos ja comprovados nao geram trabalho extra. O plano usa `career.preparation-plan@1.0.0`, funciona com o provider mock gratuito e fica marcado como desatualizado quando a matriz muda.
+
 Endpoints:
 
 - `GET /api/v1/job-opportunities`
@@ -346,6 +348,7 @@ Endpoints:
 - `DELETE /api/v1/job-opportunities/:opportunityId`
 - `POST /api/v1/jobs/:opportunityId/analyze`
 - `POST /api/v1/jobs/:opportunityId/evaluate-competencies`
+- `POST /api/v1/jobs/:opportunityId/preparation-plan`
 
 Os contratos completos estao registrados em `docs/api/openapi.yaml`.
 
@@ -458,14 +461,17 @@ Endpoints:
 33. Voltar a Jobs, selecionar a evidencia e clicar em `Avaliar competencias`.
 34. Confirmar score, cobertura de todos os requisitos, IDs citados e lacunas sem evidencia.
 35. Analisar novamente a vaga e confirmar que a matriz anterior aparece como desatualizada ate nova avaliacao.
-36. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
-37. Selecionar a evidencia salva, escolher Portugues e gerar sem precisar repetir todo o perfil.
-38. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
-39. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
-40. Excluir a evidencia e confirmar que o documento e a avaliacao anteriores preservam o snapshot e os IDs historicos.
-41. Excluir um pacote e confirmar que a vaga continua disponivel.
-42. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
-43. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
+36. Refazer a avaliacao, clicar em `Gerar plano de preparacao` e conferir a ordem de prioridades.
+37. Confirmar que cada lacuna/parcial tem acoes, criterio de conclusao, modulo recomendado e orientacao documental.
+38. Refazer a avaliacao e confirmar que o plano anterior aparece como desatualizado.
+39. No detalhe da vaga, clicar em `Criar documentos` e confirmar que a vaga fica preselecionada.
+40. Selecionar a evidencia salva, escolher Portugues e gerar sem precisar repetir todo o perfil.
+41. Conferir CV, carta e matriz; requisitos nao sustentados devem aparecer como lacunas.
+42. Baixar o Markdown, gerar tambem a versao em Ingles e confirmar que os dois pacotes ficam salvos.
+43. Excluir a evidencia e confirmar que o documento, a avaliacao e o plano anteriores preservam seus snapshots historicos.
+44. Excluir um pacote e confirmar que a vaga continua disponivel.
+45. Excluir a empresa e confirmar que a vaga foi preservada e apenas desassociada.
+46. Excluir uma oportunidade de teste e confirmar que ela desaparece da listagem.
 
 ## Scripts
 
@@ -490,7 +496,7 @@ Endpoints:
 
 O projeto inclui GitHub Actions em `.github/workflows/ci.yml` com PostgreSQL de servico, `npm ci`, Prisma generate, readiness, migrations, seed, lint, typecheck, testes, build e smoke E2E.
 
-A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, avaliacao de competencias, treino direcionado, candidaturas e documentos de carreira.
+A suite cobre unitariamente Interview, feedback, Grill Me, Guided Learning, Technical Lab, Knowledge Base, CRI, Developer Diary e os servicos de Career Intelligence. Os testes de integracao exercitam autenticacao e os endpoints principais pelo adaptador HTTP do Nest. O smoke E2E confirma o fluxo completo de entrevista e tambem vagas, empresas, contatos, evidencias reutilizaveis, avaliacao de competencias, plano de preparacao priorizado, treino direcionado, candidaturas e documentos de carreira.
 
 Para smoke E2E local:
 

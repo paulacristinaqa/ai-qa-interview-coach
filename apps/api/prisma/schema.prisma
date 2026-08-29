@@ -30,6 +30,7 @@ model User {
   companyContacts   CompanyContact[]
   professionalEvidence ProfessionalEvidence[]
   competencyEvaluations CompetencyEvaluation[]
+  jobPreparationPlans JobPreparationPlan[]
 
   @@map("users")
 }
@@ -59,6 +60,7 @@ model JobOpportunity {
   application    JobApplication?
   documents      CareerDocument[]
   competencyEvaluation CompetencyEvaluation?
+  preparationPlan JobPreparationPlan?
 
   @@index([userId, status])
   @@index([userId, workModel])
@@ -221,6 +223,26 @@ model CompetencyEvaluation {
 
   @@index([userId, updatedAt])
   @@map("competency_evaluations")
+}
+
+model JobPreparationPlan {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  opportunityId         String   @unique @map("opportunity_id")
+  summary               String
+  items                 Json
+  evaluationUpdatedAt   DateTime @map("evaluation_updated_at")
+  providerName          String   @map("provider_name")
+  modelName             String   @map("model_name")
+  promptTemplateVersion String   @map("prompt_template_version")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user        User           @relation(fields: [userId], references: [id])
+  opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@map("job_preparation_plans")
 }
 
 model InterviewSession {

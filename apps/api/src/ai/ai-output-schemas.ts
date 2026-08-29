@@ -151,6 +151,34 @@ export const competencyEvaluationSchema: Record<string, unknown> = {
   required: ["summary", "overallScore", "requirements"]
 };
 
+export const jobPreparationPlanSchema: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    summary: { type: "string", minLength: 1 },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          requirementId: { type: "string", minLength: 1 },
+          requirement: { type: "string", minLength: 1 },
+          sourceStatus: { type: "string", enum: ["partial", "gap"] },
+          priority: { type: "string", enum: ["high", "medium", "low"] },
+          objective: { type: "string", minLength: 1 },
+          actions: { type: "array", minItems: 1, maxItems: 4, items: { type: "string", minLength: 1 } },
+          successCriteria: { type: "array", minItems: 1, maxItems: 3, items: { type: "string", minLength: 1 } },
+          recommendedModule: { type: "string", enum: ["technical-lab", "grill-me", "evidence-library"] },
+          documentAction: { type: "string", enum: ["strengthen-evidence", "omit-until-evidenced"] }
+        },
+        required: ["requirementId", "requirement", "sourceStatus", "priority", "objective", "actions", "successCriteria", "recommendedModule", "documentAction"]
+      }
+    }
+  },
+  required: ["summary", "items"]
+};
+
 export const careerDocumentPackSchema: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
